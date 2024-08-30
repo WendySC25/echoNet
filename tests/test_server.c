@@ -70,7 +70,24 @@ int main(void) {
 
     UNITY_BEGIN();
 
+    int serverSocketFD = socket(AF_INET, SOCK_STREAM, 0); 
+    struct sockaddr_in *serverAddress = createAddress(2000); 
+    bind(serverSocketFD, (struct sockaddr *)serverAddress, sizeof(*serverAddress));
+    listen(serverSocketFD, 10);
+    
+    pthread_t serverThread;
+
+    if (pthread_create(&serverThread, NULL, (void *(*)(void *))start, (void *)(intptr_t)serverSocketFD) != 0) {
+        perror("Failed to create server thread");
+        exit(EXIT_FAILURE);
+    }
+
+    pthread_detach(serverThread);
+    sleep(1); 
+    
     RUN_TEST(test_socket_connection);
+
+    shutdown(serverSocketFD, SHUT_RDWR);
 
     return UNITY_END();
 }
