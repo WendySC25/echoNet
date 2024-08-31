@@ -16,5 +16,8 @@ struct AcceptedSocket {
 struct sockaddr_in* createAddress(int port);
 struct AcceptedSocket* accepConnection(int serverSocketFD);
 void start(int serverSocketFD);
+void createReceiveMesssageThread(struct AcceptedSocket *pSocket);
+void *receiveAndPrintIncomingData(void *arg);
+void sendToGlobalChat(char *buffer, int socketFD);
 
 #endif 
