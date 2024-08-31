@@ -7,10 +7,10 @@ unity_dir = 'third_party/unity/src'
 
 # Code files
 src_files = files(
-    join_paths(src_dir, 'hello.c')
+    join_paths(src_dir, 'server.c')
 )
 test_files = files(
-    join_paths(test_dir, 'test_hello.c')
+    join_paths(test_dir, 'test_server.c')
 )
 
 # Unity files
