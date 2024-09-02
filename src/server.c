@@ -22,7 +22,6 @@ struct AcceptedSocket* accepConnection(int serverSocketFD) {
     struct sockaddr_in clientAddress;
     socklen_t clientAddressSize = sizeof(clientAddress);
     int clientSocketFD = accept(serverSocketFD, (struct sockaddr *)&clientAddress, &clientAddressSize);
-
     struct AcceptedSocket* acceptedSocket = malloc(sizeof(struct AcceptedSocket));
     if (acceptedSocket == NULL) {
         perror("Failed to allocate memory for AcceptedSocket. ");
@@ -56,6 +55,7 @@ void createReceiveMesssageThread(struct AcceptedSocket *pSocket) {
         perror("Failed to allocate memory for socketFD");
         return;
     }
+
     *socketFD = pSocket->acceptedSocketFD;
 
     if (pthread_create(&id, NULL, receiveAndPrintIncomingData, socketFD) != 0) {
@@ -94,32 +94,5 @@ void sendToGlobalChat(char *buffer, int socketFD) {
         
 }
 
-int main(int argc, char* argv[]){
-
-    int port = atoi(argv[1]); 
-
-
-    int serverSocketFD                =  socket(AF_INET, SOCK_STREAM, 0); 
-    struct sockaddr_in *serverAddress = createAddress(port); 
-
-    int result = bind(serverSocketFD, (struct sockaddr *)serverAddress, sizeof(*serverAddress));
-
-    if (result == 0)
-        printf("Socket was bound successfully\n"); 
-    else {
-        printf("Socket bound fail\n");
-        return 1;
-    }
-
-    if (listen(serverSocketFD, 10) != 0) {
-        perror("Failed to listen on socket");
-        return 1;
-    }
-
-    start(serverSocketFD);
-    shutdown(serverSocketFD, SHUT_RDWR);
-    return 0;
-
-}
 
 
