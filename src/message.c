@@ -121,3 +121,86 @@ Result getResult(const char* str) {
     if (strcmp(str, "NOT_IDENTIFIED") == 0) return RE_NOT_IDENTIFIED;
     return RE_INVALID;
 }
+
+
+char* toJSON(Message* message){
+
+    cJSON *json = cJSON_CreateObject();
+    switch (message->type){
+        case IDENTIFY:
+            cJSON_AddStringToObject(json, "type",     "IDENTIFY");
+            cJSON_AddStringToObject(json, "username", message->username);
+            break;
+        
+        case NEW_USER:
+            cJSON_AddStringToObject(json, "type",     "NEW_USER");
+            cJSON_AddStringToObject(json, "username", message->username);
+            break;
+
+        case RESPONSE:
+            cJSON_AddStringToObject(json, "type",      "RESPONSE");
+            cJSON_AddStringToObject(json, "operation", operationToString(message->operation));
+            cJSON_AddStringToObject(json, "result",    resultToString(message-> result));
+            cJSON_AddStringToObject(json, "extra",     message->extra);
+            break;
+
+        default:
+            cJSON_AddStringToObject(json, "type",      "INVALID");
+            cJSON_AddStringToObject(json, "operation", "INVALID");
+            cJSON_AddStringToObject(json, "result",    "INVALID");
+            break;
+    }
+
+    char *jsonString = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    return jsonString;
+
+}
+
+Message getMessage(char* jsonString){
+
+    Message message;
+    cJSON *json = cJSON_Parse(jsonString);
+
+    if (!json) {
+        message.type = INVALID;
+        return message;
+    }
+
+    const cJSON *type = cJSON_GetObjectItemCaseSensitive(json, "type");
+    if (cJSON_IsString(type) && (type->valuestring != NULL)) {
+        if (strcmp(type->valuestring, "RESPONSE") == 0) {
+            message.type = RESPONSE;
+            const cJSON *operation = cJSON_GetObjectItemCaseSensitive(json, "operation");
+            const cJSON *result    = cJSON_GetObjectItemCaseSensitive(json, "result");
+            const cJSON *extra     = cJSON_GetObjectItemCaseSensitive(json,  "extra");
+
+            if (cJSON_IsString(operation)) 
+                message.operation = getOperation(operation->valuestring);
+            
+            if (cJSON_IsString(result)) 
+                message.result = getResult(result->valuestring);
+
+            if (cJSON_IsString(extra)) 
+                strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
+
+        }
+
+        if (strcmp(type->valuestring, "IDENTIFY") == 0) {
+            message.type = IDENTIFY;
+            const cJSON *username    = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+            if (cJSON_IsString(username)) 
+                strcpy(message.username, username->valuestring);
+        }
+
+        
+    }
+
+    cJSON_Delete(json);
+    return message;
+}
+
+
+
+
