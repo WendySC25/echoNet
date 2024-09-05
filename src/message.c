@@ -1,71 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "/Users/wendysc/Desktop/Semestre3/MyP/echoNet/third_party/cJSON/cJSON.h"
-
-typedef enum {
-    IDENTIFY,
-    RESPONSE,
-    NEW_USER,
-    STATUS,
-    NEW_STATUS,
-    USERS,
-    USER_LIST,
-    TEXT,
-    TEXT_FROM,
-    PUBLIC_TEXT,
-    PUBLIC_TEXT_FROM,
-    NEW_ROOM,
-    INVITE,
-    JOIN_ROOM,
-    JOINED_ROOM,
-    ROOM_USERS,
-    ROOM_USER_LIST,
-    ROOM_TEXT,
-    ROOM_TEXT_FROM,
-    LEAVE_ROOM,
-    LEFT_ROOM,
-    DISCONNECT,
-
-    INVALID
-} Type;
-
-typedef enum {
-    OP_IDENTIFY,
-    OP_TEXT,
-    OP_NEW_ROOM,
-    OP_INVITE,
-    OP_JOIN_ROOM,
-    OP_ROOM_USERS,
-    OP_ROOM_TEXT,
-    OP_LEAVE_ROOM,
-    OP_DISCONNECT,
-    OP_INVALID
-} Operation;
-
-typedef enum {
-    RE_SUCCESS,
-    RE_USER_ALREADY_EXISTS,
-    RE_NO_SUCH_USER,
-    RE_ROOM_ALREADY_EXISTS,
-    RE_NO_SUCH_ROOM,
-    RE_NOT_INVITED,
-    RE_NOT_JOINED,
-    RE_NOT_IDENTIFIED,
-    RE_INVALID
-} Result;
-
-typedef struct {
-    Type  type;
-    Operation    operation;
-    Result       result;
-    char         extra[256];
-    char         username[9];
-    char         status[6];
-    char         roomname[17];
-    char         text[256];
-
-} Message;
+#include "message.h"
 
 
 const char* operationToString(Operation operation) {
@@ -122,11 +55,9 @@ Result getResult(const char* str) {
     return RE_INVALID;
 }
 
-
-char* toJSON(Message* message){
-
+char* toJSON(Message* message) {
     cJSON *json = cJSON_CreateObject();
-    switch (message->type){
+    switch (message->type) {
         case IDENTIFY:
             cJSON_AddStringToObject(json, "type",     "IDENTIFY");
             cJSON_AddStringToObject(json, "username", message->username);
@@ -140,7 +71,7 @@ char* toJSON(Message* message){
         case RESPONSE:
             cJSON_AddStringToObject(json, "type",      "RESPONSE");
             cJSON_AddStringToObject(json, "operation", operationToString(message->operation));
-            cJSON_AddStringToObject(json, "result",    resultToString(message-> result));
+            cJSON_AddStringToObject(json, "result",    resultToString(message->result));
             cJSON_AddStringToObject(json, "extra",     message->extra);
             break;
 
@@ -154,11 +85,9 @@ char* toJSON(Message* message){
     char *jsonString = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
     return jsonString;
-
 }
 
-Message getMessage(char* jsonString){
-
+Message getMessage(char* jsonString) {
     Message message;
     cJSON *json = cJSON_Parse(jsonString);
 
@@ -184,23 +113,15 @@ Message getMessage(char* jsonString){
             if (cJSON_IsString(extra)) 
                 strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
 
-        }
-
-        if (strcmp(type->valuestring, "IDENTIFY") == 0) {
+        } else if (strcmp(type->valuestring, "IDENTIFY") == 0) {
             message.type = IDENTIFY;
             const cJSON *username    = cJSON_GetObjectItemCaseSensitive(json, "username");
 
             if (cJSON_IsString(username)) 
                 strcpy(message.username, username->valuestring);
         }
-
-        
     }
 
     cJSON_Delete(json);
     return message;
 }
-
-
-
-
