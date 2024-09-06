@@ -5,31 +5,23 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-#include "server.h"
 
 int main(int argc, char* argv[]){
 
-    int port = atoi(argv[1]); 
+    struct Server* server = newServer(atoi(argv[1]));
 
-    int serverSocketFD                =  socket(AF_INET, SOCK_STREAM, 0); 
-    struct sockaddr_in *serverAddress = createAddress(port); 
-
-    int result = bind(serverSocketFD, (struct sockaddr *)serverAddress, sizeof(*serverAddress));
-
-    if (result == 0)
-        printf("Socket was bound successfully\n"); 
-    else {
-        printf("Socket bound fail\n");
-        return 1;
+    if (server == NULL) {
+        fprintf(stderr, "Failed to start server.\n");
+        return EXIT_FAILURE;
     }
 
-    if (listen(serverSocketFD, 10) != 0) {
-        perror("Failed to listen on socket");
-        return 1;
-    }
+    // Print a success message
+    printf("Server is up and running successfully on port %d.\n", atoi(argv[1]));
 
-    start(serverSocketFD);
-    shutdown(serverSocketFD, SHUT_RDWR);
+    startServer(server);
+    
     return 0;
+
+    
 
 }
