@@ -4,37 +4,86 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <arpa/inet.h>
-
-struct Connection connections[100];
-int acceptedConnectionCount = 0;
 
 struct sockaddr_in* createAddress(int port) {
-    // Sólo IPv4 
-    struct sockaddr_in  *address = malloc(sizeof(struct sockaddr_in));
+    struct sockaddr_in *address = malloc(sizeof(struct sockaddr_in));
+    if (address == NULL) {
+        perror("Failed to allocate memory for address");
+        return NULL;
+    }
     address->sin_family = AF_INET;
     address->sin_port = htons(port);
     address->sin_addr.s_addr = INADDR_ANY;
     return address;
 }
 
+struct Server* newServer(int port) {
+    struct Server* server = malloc(sizeof(struct Server));
 
-// Esto es como el constructor de la clase conexión
-struct Connection* accepConnection(int serverSocketFD) {
-    struct sockaddr_in clientAddress;
-    socklen_t clientAddressSize = sizeof(clientAddress);
-    int clientSocketFD = accept(serverSocketFD, (struct sockaddr *)&clientAddress, &clientAddressSize);
-    struct Connection* connection = malloc(sizeof(struct Connection));
-    if (connection == NULL) {
-        perror("Failed to allocate memory for Connection. ");
+    if (server == NULL) {
+        perror("Failed to allocate memory for Server");
         return NULL;
     }
+
+    server->serverSocketFD = socket(AF_INET, SOCK_STREAM, 0); 
+    if (server->serverSocketFD < 0) {
+        perror("Failed to create socket");
+        free(server);
+        return NULL;
+    }
+
+    server->address = createAddress(port);
+    if (server->address == NULL) {
+        close(server->serverSocketFD);
+        free(server);
+        return NULL;
+    }
+
+    int result = bind(server->serverSocketFD, (struct sockaddr *)server->address, sizeof(*server->address));
+    if (result != 0) {
+        perror("Failed to bind socket");
+        close(server->serverSocketFD);
+        free(server->address);
+        free(server);
+        return NULL;
+    }
+
+    if (listen(server->serverSocketFD, 10) != 0) {
+        perror("Failed to listen on socket");
+        close(server->serverSocketFD);
+        free(server->address);
+        free(server);
+        return NULL;
+    }
+
+    server->acceptedConnectionCount = 0;
+    return server;
+}
+
+struct Connection* acceptConnection(struct Server* server) {
+    struct sockaddr_in clientAddress;
+    socklen_t clientAddressSize = sizeof(clientAddress);
+    int clientSocketFD = accept(server->serverSocketFD, (struct sockaddr *)&clientAddress, &clientAddressSize);
+
+    if (clientSocketFD < 0) {
+        perror("Failed to accept connection");
+        return NULL;
+    }
+
+    struct Connection* connection = malloc(sizeof(struct Connection));
+    if (connection == NULL) {
+        perror("Failed to allocate memory for Connection");
+        close(clientSocketFD);
+        return NULL;
+    }
+
     connection->address = clientAddress;
     connection->acceptedSocketFD = clientSocketFD;
     connection->acceptedSuccessfully = clientSocketFD > 0;
 
-    if (!connection->acceptedSuccessfully)
+    if (!connection->acceptedSuccessfully) {
         connection->error = clientSocketFD;
+    }
 
     connection->in  = fdopen(clientSocketFD, "r");
     connection->out = fdopen(clientSocketFD, "w");
@@ -49,45 +98,52 @@ struct Connection* accepConnection(int serverSocketFD) {
     return connection;
 }
 
-// el método sirve de la clase Servidor
-void start(int serverSocketFD) {
-    while (true) {
-        struct Connection* clientSocket = accepConnection(serverSocketFD);
-        if (clientSocket->acceptedSuccessfully) {
-            connections[acceptedConnectionCount++] = *clientSocket;
-            createReceiveMesssageThread(clientSocket);
+void startServer(struct Server* server) {
+    while (1) {
+        struct Connection* clientSocket = acceptConnection(server);
+        if (clientSocket && clientSocket->acceptedSuccessfully) {
+            if (server->acceptedConnectionCount < MAX_CONNECTIONS) {
+                server->connections[server->acceptedConnectionCount++] = *clientSocket;
+                createReceiveMessageThread(clientSocket, server);
+            } else {
+                printf("Maximum number of connections reached.\n");
+                free(clientSocket);
+            }
+        } else if (clientSocket) {
+            free(clientSocket);
         }
-        free(clientSocket);
     }
 }
 
-// Esto esta dentro del método sirve, lo que hace es crear el hilo de ejecucion de recibir mensajes
-void createReceiveMesssageThread(struct Connection *pSocket) {
+void createReceiveMessageThread(struct Connection *pSocket, struct Server* server) {
     pthread_t id;
-    struct Connection *socketCopy = malloc(sizeof(struct Connection));
-    if (socketCopy == NULL) {
-        perror("Failed to allocate memory for socketFD");
+    struct ThreadData *threadData = malloc(sizeof(struct ThreadData));
+    if (threadData == NULL) {
+        perror("Failed to allocate memory for threadData");
         return;
     }
 
-    *socketCopy = *pSocket;
+    threadData->connection = pSocket;
+    threadData->server = server;
 
-    if (pthread_create(&id, NULL, receiveAndPrintIncomingData, socketCopy) != 0) {
+    if (pthread_create(&id, NULL, receiveAndPrintIncomingData, threadData) != 0) {
         perror("Failed to create thread");
-        free(socketCopy);
+        free(threadData);
     }
     pthread_detach(id);
 }
 
-// Método recibe mensajes de la clase Conexión
 void *receiveAndPrintIncomingData(void *arg) {
-    struct Connection *socket = (struct Connection *)arg;
+    struct ThreadData *data = (struct ThreadData *)arg;
+    struct Connection *socket = data->connection;
+    struct Server *server = data->server;
+
     char buffer[1024];
 
-    while (true) {
+    while (1) {
         if (fgets(buffer, sizeof(buffer), socket->in) != NULL) {
             printf("Received message: %s", buffer);
-            sendToGlobalChat(buffer, socket->acceptedSocketFD);
+            sendToGlobalChat(buffer, socket->acceptedSocketFD, server);
         } else {
             break; 
         }
@@ -96,17 +152,15 @@ void *receiveAndPrintIncomingData(void *arg) {
     fclose(socket->in);
     fclose(socket->out);
     close(socket->acceptedSocketFD);
-    free(socket);
+    free(data);
     return NULL;
 }
 
-void sendToGlobalChat(char *buffer, int socketFD) {
-    for (int i = 0; i < acceptedConnectionCount; i++) 
-        if (connections[i].acceptedSocketFD != socketFD) {
-            fprintf(connections[i].out, "%s", buffer);
-            fflush(connections[i].out);  
+void sendToGlobalChat(char *buffer, int socketFD, struct Server* server) {
+    for (int i = 0; i < server->acceptedConnectionCount; i++) {
+        if (server->connections[i].acceptedSocketFD != socketFD) {
+            fprintf(server->connections[i].out, "%s", buffer);
+            fflush(server->connections[i].out);  
         }
+    }
 }
-
-
-
