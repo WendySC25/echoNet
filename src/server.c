@@ -4,16 +4,20 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "user.h"
+#include "protocol.h"
+#include "message.h"
 
-struct sockaddr_in* createAddress(int port) {
-    struct sockaddr_in *address = malloc(sizeof(struct sockaddr_in));
-    if (address == NULL) {
-        perror("Failed to allocate memory for address");
-        return NULL;
-    }
+struct sockaddr_in* createAddress(char *ip, int port) {
+    struct sockaddr_in  *address = malloc(sizeof(struct sockaddr_in));
     address->sin_family = AF_INET;
     address->sin_port = htons(port);
-    address->sin_addr.s_addr = INADDR_ANY;
+
+    if(strlen(ip) ==0)
+        address->sin_addr.s_addr = INADDR_ANY;
+    else
+        inet_pton(AF_INET,ip,&address->sin_addr.s_addr);
+
     return address;
 }
 
@@ -32,7 +36,7 @@ struct Server* newServer(int port) {
         return NULL;
     }
 
-    server->address = createAddress(port);
+    server->address = createAddress("",port);
     if (server->address == NULL) {
         close(server->serverSocketFD);
         free(server);
@@ -57,6 +61,16 @@ struct Server* newServer(int port) {
     }
 
     server->acceptedConnectionCount = 0;
+    server->connections = g_hash_table_new_full(
+        g_str_hash,           // Función de hash para cadenas
+        g_str_equal,          // Función de comparación para cadenas
+        g_free,               // Función para liberar las claves (serán cadenas duplicadas)
+        (GDestroyNotify)free  // Función para liberar los valores (estructuras Connection)
+    );
+
+    server->chat_rooms = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_hash_table_destroy);
+    g_mutex_init(&(server->room_mutex));
+    
     return server;
 }
 
@@ -70,6 +84,15 @@ struct Connection* acceptConnection(struct Server* server) {
         return NULL;
     }
 
+    struct Connection* connection = newConnection(clientSocketFD);
+    if (connection == NULL) {
+        return NULL;
+    }
+
+    return connection;
+}
+
+struct Connection* newConnection(int clientSocketFD) {
     struct Connection* connection = malloc(sizeof(struct Connection));
     if (connection == NULL) {
         perror("Failed to allocate memory for Connection");
@@ -77,7 +100,6 @@ struct Connection* acceptConnection(struct Server* server) {
         return NULL;
     }
 
-    connection->address = clientAddress;
     connection->acceptedSocketFD = clientSocketFD;
     connection->acceptedSuccessfully = clientSocketFD > 0;
 
@@ -85,7 +107,7 @@ struct Connection* acceptConnection(struct Server* server) {
         connection->error = clientSocketFD;
     }
 
-    connection->in  = fdopen(clientSocketFD, "r");
+    connection->in = fdopen(clientSocketFD, "r");
     connection->out = fdopen(clientSocketFD, "w");
 
     if (connection->in == NULL || connection->out == NULL) {
@@ -95,6 +117,7 @@ struct Connection* acceptConnection(struct Server* server) {
         return NULL;
     }
 
+    connection->user = newUser("newuser");
     return connection;
 }
 
@@ -103,7 +126,8 @@ void startServer(struct Server* server) {
         struct Connection* clientSocket = acceptConnection(server);
         if (clientSocket && clientSocket->acceptedSuccessfully) {
             if (server->acceptedConnectionCount < MAX_CONNECTIONS) {
-                server->connections[server->acceptedConnectionCount++] = *clientSocket;
+                
+                // server->connections[server->acceptedConnectionCount++] = *clientSocket;
                 createReceiveMessageThread(clientSocket, server);
             } else {
                 printf("Maximum number of connections reached.\n");
@@ -115,6 +139,43 @@ void startServer(struct Server* server) {
     }
 }
 
+void freeConnection(struct Connection* connection) {
+    fclose(connection->in);
+    fclose(connection->out);
+    close(connection->acceptedSocketFD);
+    freeUser(connection->user);
+    free(connection);
+}
+
+
+// void add_connection(Server *server, const char *username, Connection *conn) {
+    
+//     char *username_key = g_strdup(username);
+//     g_hash_table_insert(server->connections, username_key, conn);
+//     server->acceptedConnectionCount++;
+// }
+
+// Connection *get_connection(Server *server, const char *username) {
+//     return g_hash_table_lookup(server->connections, username);
+// }
+
+// void remove_connection(Server *server, const char *username) {
+//     // Obtener la conexión y eliminarla del diccionario
+//     Connection *conn = g_hash_table_lookup(server->connections, username);
+//     if (conn != NULL) {
+//         g_hash_table_remove(server->connections, username);
+//         free(conn); // Liberar la memoria de la conexión
+//         server->acceptedConnectionCount--;
+//     }
+// }
+
+// void free_server(Server *server) {
+//     g_hash_table_destroy(server->connections); 
+//     free(server->address);
+//     close(server->serverSocketFD);
+// }
+
+
 void createReceiveMessageThread(struct Connection *pSocket, struct Server* server) {
     pthread_t id;
     struct ThreadData *threadData = malloc(sizeof(struct ThreadData));
@@ -122,45 +183,79 @@ void createReceiveMessageThread(struct Connection *pSocket, struct Server* serve
         perror("Failed to allocate memory for threadData");
         return;
     }
-
     threadData->connection = pSocket;
-    threadData->server = server;
+    threadData->server     = server;
 
-    if (pthread_create(&id, NULL, receiveAndPrintIncomingData, threadData) != 0) {
+    if (pthread_create(&id, NULL, receiveMessages, threadData) != 0) {
         perror("Failed to create thread");
         free(threadData);
     }
+
     pthread_detach(id);
 }
 
-void *receiveAndPrintIncomingData(void *arg) {
+void *receiveMessages(void *arg) {
     struct ThreadData *data = (struct ThreadData *)arg;
-    struct Connection *socket = data->connection;
+    struct Connection *connection = data->connection;
     struct Server *server = data->server;
 
     char buffer[1024];
 
     while (1) {
-        if (fgets(buffer, sizeof(buffer), socket->in) != NULL) {
+        if (fgets(buffer, sizeof(buffer), connection->in) != NULL) {
             printf("Received message: %s", buffer);
-            sendToGlobalChat(buffer, socket->acceptedSocketFD, server);
+
+            // //ALGO ESTA MAL EN .getMessage
+            // size_t len = strlen(buffer);
+            // if (len > 0 && buffer[len - 1] == '\n') {
+            //     buffer[len - 1] = '\0';
+            // }
+
+            Message message = getMessage(buffer);
+            switch (message.type) {
+
+            case IDENTIFY:
+                identifyUser(server, &message, connection);
+                break;
+
+            case INVALID:
+                printf("%s", "WTF IS GOING HWRRE");
+                break;
+
+            default:
+                printf("%s", "AHHHHHHHHH HELP ME");
+                break;
+            }
+
+    
+            // sendToGlobalChat(buffer, connection->acceptedSocketFD, server);
         } else {
             break; 
         }
     }
 
-    fclose(socket->in);
-    fclose(socket->out);
-    close(socket->acceptedSocketFD);
+    fclose(connection->in);
+    fclose(connection->out);
+    close(connection->acceptedSocketFD);
     free(data);
     return NULL;
 }
 
-void sendToGlobalChat(char *buffer, int socketFD, struct Server* server) {
-    for (int i = 0; i < server->acceptedConnectionCount; i++) {
-        if (server->connections[i].acceptedSocketFD != socketFD) {
-            fprintf(server->connections[i].out, "%s", buffer);
-            fflush(server->connections[i].out);  
+void sendToGlobalChat(char *buffer, int socketFD, struct Server *server) {
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, server->connections);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        struct Connection *conn = (struct Connection *)value;
+        if (conn->acceptedSocketFD != socketFD) {
+            fprintf(conn->out, "%s\n", buffer);
+            fflush(conn->out);
         }
     }
+}
+void sendTo(char *buffer, struct Connection* connection) {
+    fprintf(connection->out, "%s\n", buffer);
+    fflush(connection->out);  
+        
 }

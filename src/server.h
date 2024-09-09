@@ -6,22 +6,27 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include "user.h"
+
+#include <glib.h>
 
 #define MAX_CONNECTIONS 100
 
 struct Connection {
     int    acceptedSocketFD;
-    struct sockaddr_in address;
     int    error;
     bool   acceptedSuccessfully;
     FILE   *in;  // Flujo de entrada
     FILE   *out; // Flujo de salida
+    User   *user;
 };
 
 struct Server {
     int    serverSocketFD;
     struct sockaddr_in* address;
-    struct Connection connections[MAX_CONNECTIONS];
+    GHashTable *connections;
+    GHashTable *chat_rooms;
+    GMutex room_mutex; 
     int    acceptedConnectionCount;
 };
 
@@ -31,15 +36,18 @@ struct ThreadData {
 };
 
 
-struct sockaddr_in* createAddress(int port);
+struct sockaddr_in* createAddress(char *ip, int port);
 struct Server* newServer(int port);
 
 struct Connection* acceptConnection(struct Server* server);
+struct Connection* newConnection(int clientSocketFD);
 
 void startServer(struct Server* server);
 void createReceiveMessageThread(struct Connection *pSocket, struct Server* server);
-void *receiveAndPrintIncomingData(void *arg);
+void *receiveMessages(void *arg);
 void sendToGlobalChat(char *buffer, int socketFD, struct Server* server);
+void sendTo(char *buffer, struct Connection* connection);
+void freeConnection(struct Connection* connection) ;
 
 
 
