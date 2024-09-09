@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "/Users/wendysc/Desktop/Semestre3/MyP/echoNet/third_party/cJSON/cJSON.h"
+#include <glib.h>
+#include "server.h"
+
+#include "../third_party/cJSON/cJSON.h"
 
 
 typedef enum {
@@ -21,6 +24,7 @@ typedef enum {
     PUBLIC_TEXT_FROM,
     NEW_ROOM,
     INVITE,
+    INVITATION,
     JOIN_ROOM,
     JOINED_ROOM,
     ROOM_USERS,
@@ -30,6 +34,7 @@ typedef enum {
     LEAVE_ROOM,
     LEFT_ROOM,
     DISCONNECT,
+    DISCONNECTED,
     INVALID
 } Type;
 
@@ -68,13 +73,20 @@ typedef struct {
     char         status[6];
     char         roomname[17];
     char         text[256];
+
+    char **usernamesInvitation; 
+
+    GHashTable *connections;
+    GHashTable *chat_rooms;
+
 } Message;
 
 const char* operationToString(Operation operation);
 const char* resultToString(Result result);
-Operation getOperation(const char* str);
-Result getResult(const char* str);
-char* toJSON(Message* message);
-Message getMessage(char* jsonString);
+Operation   getOperation(const char* str);
+Result      getResult(const char* str);
+char*       toJSON(Message* message);
+Message     getMessage(char* jsonString);
+Message     parseInput(const char *input) 
 
 #endif 

@@ -1,5 +1,5 @@
 #include "message.h"
-
+#include "server.h"
 
 const char* operationToString(Operation operation) {
     switch(operation) {
@@ -75,6 +75,144 @@ char* toJSON(Message* message) {
             cJSON_AddStringToObject(json, "extra",     message->extra);
             break;
 
+        case STATUS:
+            cJSON_AddStringToObject(json, "type", "STATUS");
+            cJSON_AddStringToObject(json, "status", message->status);
+            break;
+        
+        case NEW_STATUS:
+            cJSON_AddStringToObject(json, "type", "STATUS");
+            cJSON_AddStringToObject(json, "username", message->username);
+            cJSON_AddStringToObject(json, "status", message->status);
+            break;
+
+
+        case USERS:
+            cJSON_AddStringToObject(json, "type", "USERS");
+            break;
+        
+        case USER_LIST:
+            cJSON_AddStringToObject(json, "type", "USER_LIST");
+            // cJSON *users = cJSON_AddObjectToObject(json, "users");
+
+            // GHashTableIter iter;
+            // gpointer key, value;
+            // g_hash_table_iter_init(&iter, message->connections);
+            // while (g_hash_table_iter_next(&iter, &key, &value)) {
+            //     Connection *conn = (Connection *)value;
+            //     if (conn && conn->user && conn->user->username) 
+            //         cJSON_AddStringToObject(users, conn->user->username, conn->user->status);
+            // }
+            break;
+
+        case TEXT:
+            cJSON_AddStringToObject(json, "type", "TEXT");
+            cJSON_AddStringToObject(json, "username", message->username);
+            cJSON_AddStringToObject(json, "text", message->text);
+            break;
+        
+        case TEXT_FROM:
+            cJSON_AddStringToObject(json, "type", "TEXT_FROM");
+            cJSON_AddStringToObject(json, "username", message->username);
+            cJSON_AddStringToObject(json, "text", message->text);
+            break;
+
+        case PUBLIC_TEXT:
+            cJSON_AddStringToObject(json, "type", "PUBLIC_TEXT");
+            cJSON_AddStringToObject(json, "text", message->text);
+            break;
+        
+        case PUBLIC_TEXT_FROM:
+            cJSON_AddStringToObject(json, "type", "PUBLIC_TEXT_FROM");
+            cJSON_AddStringToObject(json, "username", message->username);
+            cJSON_AddStringToObject(json, "text", message->text);
+            break;
+
+        case NEW_ROOM:
+            cJSON_AddStringToObject(json, "type", "NEW_ROOM");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            
+            break;
+
+        case INVITE:
+            cJSON_AddStringToObject(json, "type", "INVITE");
+            // cJSON_AddStringToObject(json, "roomname", message->roomname);
+            // cJSON *users = cJSON_AddArrayToObject(json, "usernames");
+            // for (int i = 0; message->usernames[i] != NULL; i++) 
+            //         cJSON_AddItemToArray(users, cJSON_CreateString(message->usernamesInvitation[i]));
+            break;
+        
+        case INVITATION:
+            cJSON_AddStringToObject(json, "type", "INVITATION");
+            cJSON_AddStringToObject(json, "username", message->username);
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            break;
+
+
+        case JOIN_ROOM:
+            cJSON_AddStringToObject(json, "type", "JOIN_ROOM");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            break;
+
+        case JOINED_ROOM:
+            cJSON_AddStringToObject(json, "type", "JOINED_ROOM");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            cJSON_AddStringToObject(json, "username", message->username);
+
+        case ROOM_USERS:
+            cJSON_AddStringToObject(json, "type", "ROOM_USERS");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            break;
+        
+        case ROOM_USER_LIST:
+            cJSON_AddStringToObject(json, "type", "ROOM_USER_LIST");
+            // cJSON *users = cJSON_AddObjectToObject(json, "users");
+
+            // GHashTableIter iter;
+            // gpointer key, value;
+            // g_hash_table_iter_init(&iter, message->chat_rooms->clients);
+            // while (g_hash_table_iter_next(&iter, &key, &value)) {
+            //     Connection *conn = (Connection *)value;
+            //     if (conn && conn->user && conn->user->username) 
+            //         cJSON_AddStringToObject(users, conn->user->username, conn->user->status);
+            // }
+            break;
+
+
+        case ROOM_TEXT:
+            cJSON_AddStringToObject(json, "type", "ROOM_TEXT");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            cJSON_AddStringToObject(json, "text", message->text);
+            break;
+        
+        case ROOM_TEXT_FROM:
+            cJSON_AddStringToObject(json, "type", "ROOM_TEXT_FROM");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            cJSON_AddStringToObject(json, "username", message->username);
+            cJSON_AddStringToObject(json, "text", message->text);
+            break;
+
+        case LEAVE_ROOM:
+            cJSON_AddStringToObject(json, "type", "LEAVE_ROOM");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            break;
+
+        case LEFT_ROOM:
+            cJSON_AddStringToObject(json, "type", "LEFT_ROOM");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            cJSON_AddStringToObject(json, "username", message->username);
+            break;
+            
+
+        case DISCONNECT:
+            cJSON_AddStringToObject(json, "type", "DISCONNECT");
+            break;
+
+        case DISCONNECTED:
+            cJSON_AddStringToObject(json, "type", "DISCONNECT");
+            cJSON_AddStringToObject(json, "username", message->username);
+            break;
+
         default:
             cJSON_AddStringToObject(json, "type",      "INVALID");
             cJSON_AddStringToObject(json, "operation", "INVALID");
@@ -97,31 +235,344 @@ Message getMessage(char* jsonString) {
     }
 
     const cJSON *type = cJSON_GetObjectItemCaseSensitive(json, "type");
-    if (cJSON_IsString(type) && (type->valuestring != NULL)) {
-        if (strcmp(type->valuestring, "RESPONSE") == 0) {
-            message.type = RESPONSE;
-            const cJSON *operation = cJSON_GetObjectItemCaseSensitive(json, "operation");
-            const cJSON *result    = cJSON_GetObjectItemCaseSensitive(json, "result");
-            const cJSON *extra     = cJSON_GetObjectItemCaseSensitive(json,  "extra");
+    if (!cJSON_IsString(type) || (type->valuestring == NULL)) {
+        message.type = INVALID;
+        cJSON_Delete(json);
+        return message;
+    }
 
-            if (cJSON_IsString(operation)) 
-                message.operation = getOperation(operation->valuestring);
-            
-            if (cJSON_IsString(result)) 
-                message.result = getResult(result->valuestring);
+    if (strcmp(type->valuestring, "RESPONSE") == 0) {
+        message.type = RESPONSE;
+        const cJSON *operation = cJSON_GetObjectItemCaseSensitive(json, "operation");
+        const cJSON *result    = cJSON_GetObjectItemCaseSensitive(json, "result");
+        const cJSON *extra     = cJSON_GetObjectItemCaseSensitive(json, "extra");
 
-            if (cJSON_IsString(extra)) 
-                strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
+        if (cJSON_IsString(operation)) 
+            message.operation = getOperation(operation->valuestring);
+        
+        if (cJSON_IsString(result)) 
+            message.result = getResult(result->valuestring);
 
-        } else if (strcmp(type->valuestring, "IDENTIFY") == 0) {
-            message.type = IDENTIFY;
-            const cJSON *username    = cJSON_GetObjectItemCaseSensitive(json, "username");
+        if (cJSON_IsString(extra)) 
+            strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
 
-            if (cJSON_IsString(username)) 
-                strcpy(message.username, username->valuestring);
+    } else if (strcmp(type->valuestring, "IDENTIFY") == 0) {
+        message.type = IDENTIFY;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+
+    } else if (strcmp(type->valuestring, "NEW_USER") == 0) {
+        message.type = NEW_USER;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+
+    } else if (strcmp(type->valuestring, "STATUS") == 0) {
+        message.type = STATUS;
+        const cJSON *status = cJSON_GetObjectItemCaseSensitive(json, "status");
+
+        if (cJSON_IsString(status)) 
+            strncpy(message.status, status->valuestring, sizeof(message.status)-1);
+
+    } else if (strcmp(type->valuestring, "NEW_STATUS") == 0) {
+        message.type = NEW_STATUS;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *status = cJSON_GetObjectItemCaseSensitive(json, "status");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        
+        if (cJSON_IsString(status)) 
+            strncpy(message.status, status->valuestring, sizeof(message.status)-1);
+
+    } else if (strcmp(type->valuestring, "USERS") == 0) {
+        message.type = USERS;
+
+    } else if (strcmp(type->valuestring, "USER_LIST") == 0) {
+        message.type = USER_LIST;
+
+        // Aquí se podría inicializar un hash table para almacenar los usuarios y sus estados.
+        const cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
+        if (cJSON_IsObject(users)) {
+            cJSON *user;
+            cJSON_ArrayForEach(user, users) {
+                const cJSON *username = cJSON_GetObjectItemCaseSensitive(user, "username");
+                const cJSON *status = cJSON_GetObjectItemCaseSensitive(user, "status");
+                if (cJSON_IsString(username) && cJSON_IsString(status)) {
+                    // Aquí se debería agregar el usuario y su estado al hash table
+                }
+            }
         }
+
+        
+        // Aquí se podría inicializar un hash table para almacenar los usuarios y sus estados.
+
+    } else if (strcmp(type->valuestring, "TEXT") == 0) {
+        message.type = TEXT;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        
+        if (cJSON_IsString(text)) 
+            strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+
+    } else if (strcmp(type->valuestring, "TEXT_FROM") == 0) {
+        message.type = TEXT_FROM;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        
+        if (cJSON_IsString(text)) 
+            strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+
+    } else if (strcmp(type->valuestring, "PUBLIC_TEXT") == 0) {
+        message.type = PUBLIC_TEXT;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        
+        if (cJSON_IsString(text)) 
+            strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+
+    } else if (strcmp(type->valuestring, "PUBLIC_TEXT_FROM") == 0) {
+        message.type = PUBLIC_TEXT_FROM;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        
+        if (cJSON_IsString(text)) 
+            strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+
+    } else if (strcmp(type->valuestring, "NEW_ROOM") == 0) {
+        message.type = NEW_ROOM;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+
+    } else if (strcmp(type->valuestring, "INVITE") == 0) {
+        message.type = INVITE;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *usernames = cJSON_GetObjectItemCaseSensitive(json, "usernames");
+
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+        
+        if (cJSON_IsArray(usernames)) {
+            // Aquí se debería inicializar un arreglo o lista para los nombres de usuario
+            cJSON *username;
+            cJSON_ArrayForEach(username, usernames) {
+                if (cJSON_IsString(username)) {
+                    // Aquí se debería agregar el nombre de usuario al arreglo o lista
+                }
+            }
+        }
+
+    } else if (strcmp(type->valuestring, "INVITATION") == 0) {
+        message.type = INVITATION;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username) - 1);
+        
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+
+    } else if (strcmp(type->valuestring, "JOIN_ROOM") == 0) {
+        message.type = JOIN_ROOM;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+
+    } else if (strcmp(type->valuestring, "JOINED_ROOM") == 0) {
+        message.type = JOINED_ROOM;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
+        
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+
+    } else if (strcmp(type->valuestring, "ROOM_USERS") == 0) {
+        message.type = ROOM_USERS;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+
+    } else if (strcmp(type->valuestring, "ROOM_USER_LIST") == 0) {
+        message.type = ROOM_USER_LIST;
+        // Similar al caso "USER_LIST", se podría inicializar un hash table para almacenar los usuarios y sus estados.
+
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *usernames = cJSON_GetObjectItemCaseSensitive(json, "usernames");
+
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+        
+        if (cJSON_IsArray(usernames)) {
+            // Aquí se debería inicializar un arreglo o lista para los nombres de usuario
+            cJSON *username;
+            cJSON_ArrayForEach(username, usernames) {
+                if (cJSON_IsString(username)) {
+                    // Aquí se debería agregar el nombre de usuario al arreglo o lista
+                }
+            }
+        }
+
+    } else if (strcmp(type->valuestring, "ROOM_TEXT") == 0) {
+        message.type = ROOM_TEXT;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+        
+        if (cJSON_IsString(text)) 
+            strncpy(message.text, text->valuestring, sizeof(message.text) - 1);
+
+    } else if (strcmp(type->valuestring, "ROOM_TEXT_FROM") == 0) {
+        message.type = ROOM_TEXT_FROM;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
+
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
+        
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        
+        if (cJSON_IsString(text)) 
+            strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+
+    } else if (strcmp(type->valuestring, "LEAVE_ROOM") == 0) {
+        message.type = LEAVE_ROOM;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+         if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
+        
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+
+
+    } else if (strcmp(type->valuestring, "LEFT_ROOM") == 0) {
+        message.type = LEFT_ROOM;
+        const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+        if (cJSON_IsString(roomname)) 
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
+        
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+
+    } else if (strcmp(type->valuestring, "DISCONNECT") == 0) {
+        message.type = DISCONNECT;
+
+    } else if (strcmp(type->valuestring, "DISCONNECTED") == 0) {
+        message.type = DISCONNECTED;
+        const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
+
+        if (cJSON_IsString(username)) 
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+
+    } else {
+        message.type = INVALID;
     }
 
     cJSON_Delete(json);
     return message;
+}
+
+Message parseInput(const char *input) {
+    Message msg;
+    memset(&msg, 0, sizeof(msg));
+
+    if (input == NULL) {
+        msg.type = INVALID;
+        return msg;
+    }
+
+    if (strncmp(input, "\\whisper", 8) == 0) {
+        msg.type = TEXT;
+
+        const char *username_start = strchr(input + 8, ' ');
+
+        if (username_start != NULL) {
+            const char *message_start = username_start + 1;
+            if (message_start != NULL) {
+                size_t username_length = username_start - (input + 8);
+                size_t message_length = strlen(message_start);
+
+
+                if (username_length >= sizeof(msg.username) || message_length >= sizeof(msg.text)) {
+                    msg.type = INVALID;
+                    return msg;
+                }
+
+                strncpy(msg.username, input + 8, username_length);
+                msg.username[username_length] = '\0';
+                strncpy(msg.text, message_start, message_length);
+                msg.text[message_length] = '\0';
+            } else {
+                msg.type = INVALID;
+            }
+        } else {
+            msg.type = INVALID;
+        }
+
+    } else if (strncmp(input, "\\broadcast", 10) == 0) {
+        msg.type = PUBLIC_TEXT;
+        const char *message_start = input + 10;
+        if (message_start != NULL) {
+            size_t message_length = strlen(message_start);
+
+            // Verificar tamaño
+            if (message_length >= sizeof(msg.text)) {
+                msg.type = INVALID;
+                return msg;
+            }
+
+            // Copiar mensaje
+            strncpy(msg.text, message_start, message_length);
+            msg.text[message_length] = '\0';
+        } else {
+            msg.type = INVALID;
+        }
+    } else if (strncmp(input, "\\setStatus", 10) == 0) {
+        msg.type = NEW_STATUS;
+        const char *status_start = input + 10;
+        if (status_start != NULL) {
+            size_t status_length = strlen(status_start);
+
+            if (status_length >= sizeof(msg.status)) {
+                msg.type = INVALID;
+                return msg;
+            }
+
+            strncpy(msg.status, status_start, status_length);
+            msg.status[status_length] = '\0';
+        } else {
+            msg.type = INVALID;
+        }
+    } else {
+        msg.type = INVALID;
+    }
+
+    return msg;
 }

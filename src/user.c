@@ -9,7 +9,14 @@ User* newUser(const char *username) {
     }
     strncpy(user->username, username, MAX_USERNAME_LENGTH - 1);
     user->username[MAX_USERNAME_LENGTH - 1] = '\0'; 
-    user->status = ONLINE;
+
+    strncpy(user->status, "online", MAX_USERNAME_LENGTH - 1);
+    user->status[MAX_USERNAME_LENGTH - 1] = '\0'; 
+
 
     return user;
+}
+
+void freeUser(User* user) {
+    free(user);
 }
