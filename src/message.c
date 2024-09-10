@@ -1,5 +1,7 @@
 #include "message.h"
 #include "server.h"
+#include <glib.h>
+#include <stdio.h>
 
 const char* operationToString(Operation operation) {
     switch(operation) {
@@ -81,7 +83,7 @@ char* toJSON(Message* message) {
             break;
         
         case NEW_STATUS:
-            cJSON_AddStringToObject(json, "type", "STATUS");
+            cJSON_AddStringToObject(json, "type", "NEW_STATUS");
             cJSON_AddStringToObject(json, "username", message->username);
             cJSON_AddStringToObject(json, "status", message->status);
             break;
@@ -209,7 +211,7 @@ char* toJSON(Message* message) {
             break;
 
         case DISCONNECTED:
-            cJSON_AddStringToObject(json, "type", "DISCONNECT");
+            cJSON_AddStringToObject(json, "type", "DISCONNECTED");
             cJSON_AddStringToObject(json, "username", message->username);
             break;
 
@@ -508,71 +510,61 @@ Message parseInput(const char *input) {
         return msg;
     }
 
-    if (strncmp(input, "\\whisper", 8) == 0) {
+    gchar **parts = g_strsplit_set(input, " \t", -1);
+    if (parts == NULL) {
+        msg.type = INVALID;
+        return msg;
+    }
+
+    // Comando \whisper
+    if (g_strcmp0(parts[0], "\\whisper") == 0) {
         msg.type = TEXT;
+        
+        if (parts[1] != NULL) {
+            // El nombre de usuario es la segunda parte
+            g_strlcpy(msg.username, parts[1], sizeof(msg.username));
 
-        const char *username_start = strchr(input + 8, ' ');
-
-        if (username_start != NULL) {
-            const char *message_start = username_start + 1;
-            if (message_start != NULL) {
-                size_t username_length = username_start - (input + 8);
-                size_t message_length = strlen(message_start);
-
-
-                if (username_length >= sizeof(msg.username) || message_length >= sizeof(msg.text)) {
-                    msg.type = INVALID;
-                    return msg;
-                }
-
-                strncpy(msg.username, input + 8, username_length);
-                msg.username[username_length] = '\0';
-                strncpy(msg.text, message_start, message_length);
-                msg.text[message_length] = '\0';
+            // El mensaje es todo lo que sigue después del nombre de usuario
+            gchar *message = g_strjoinv(" ", &parts[2]);
+            if (message != NULL) {
+                g_strlcpy(msg.text, message, sizeof(msg.text));
+                g_free(message);
             } else {
                 msg.type = INVALID;
             }
         } else {
             msg.type = INVALID;
         }
-
-    } else if (strncmp(input, "\\broadcast", 10) == 0) {
+    } 
+    // Comando \broadcast
+    else if (g_strcmp0(parts[0], "\\broadcast") == 0) {
         msg.type = PUBLIC_TEXT;
-        const char *message_start = input + 10;
-        if (message_start != NULL) {
-            size_t message_length = strlen(message_start);
-
-            // Verificar tamaño
-            if (message_length >= sizeof(msg.text)) {
-                msg.type = INVALID;
-                return msg;
-            }
-
-            // Copiar mensaje
-            strncpy(msg.text, message_start, message_length);
-            msg.text[message_length] = '\0';
+        gchar *message = g_strjoinv(" ", &parts[1]);
+        if (message != NULL) {
+            g_strlcpy(msg.text, message, sizeof(msg.text));
+            g_free(message);
         } else {
             msg.type = INVALID;
         }
-    } else if (strncmp(input, "\\setStatus", 10) == 0) {
-        msg.type = NEW_STATUS;
-        const char *status_start = input + 10;
-        if (status_start != NULL) {
-            size_t status_length = strlen(status_start);
-
-            if (status_length >= sizeof(msg.status)) {
-                msg.type = INVALID;
-                return msg;
-            }
-
-            strncpy(msg.status, status_start, status_length);
-            msg.status[status_length] = '\0';
+    } 
+    // Comando \setStatus
+    else if (g_strcmp0(parts[0], "\\setStatus") == 0) {
+        msg.type = STATUS;
+        if (parts[1] != NULL) {
+            g_strlcpy(msg.status, parts[1], sizeof(msg.status));
         } else {
             msg.type = INVALID;
         }
-    } else {
+    } 
+
+    else if (g_strcmp0(parts[0], "\\bye") == 0) {
+        msg.type = DISCONNECT;
+    } 
+    
+    else {
         msg.type = INVALID;
     }
 
+    g_strfreev(parts);
     return msg;
 }

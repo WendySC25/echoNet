@@ -87,6 +87,6 @@ Operation   getOperation(const char* str);
 Result      getResult(const char* str);
 char*       toJSON(Message* message);
 Message     getMessage(char* jsonString);
-Message     parseInput(const char *input) 
+Message     parseInput(const char *input);
 
 #endif 
