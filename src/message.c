@@ -95,17 +95,20 @@ char* toJSON(Message* message) {
         
         case USER_LIST:
             cJSON_AddStringToObject(json, "type", "USER_LIST");
-            // cJSON *users = cJSON_AddObjectToObject(json, "users");
 
-            // GHashTableIter iter;
-            // gpointer key, value;
-            // g_hash_table_iter_init(&iter, message->connections);
-            // while (g_hash_table_iter_next(&iter, &key, &value)) {
-            //     Connection *conn = (Connection *)value;
-            //     if (conn && conn->user && conn->user->username) 
-            //         cJSON_AddStringToObject(users, conn->user->username, conn->user->status);
-            // }
+            cJSON *users = cJSON_AddObjectToObject(json, "users");
+
+            GHashTableIter iter;
+            gpointer key, value;
+            g_hash_table_iter_init(&iter, message->connections);
+            while (g_hash_table_iter_next(&iter, &key, &value)) {
+                struct Connection *conn = (struct Connection *)value;
+                if (conn && conn->user && conn->user->username) 
+                    cJSON_AddStringToObject(users, conn->user->username, conn->user->status);
+            }
+
             break;
+
 
         case TEXT:
             cJSON_AddStringToObject(json, "type", "TEXT");
@@ -294,23 +297,27 @@ Message getMessage(char* jsonString) {
         message.type = USERS;
 
     } else if (strcmp(type->valuestring, "USER_LIST") == 0) {
+        
         message.type = USER_LIST;
 
-        // Aquí se podría inicializar un hash table para almacenar los usuarios y sus estados.
-        const cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
-        if (cJSON_IsObject(users)) {
-            cJSON *user;
-            cJSON_ArrayForEach(user, users) {
-                const cJSON *username = cJSON_GetObjectItemCaseSensitive(user, "username");
-                const cJSON *status = cJSON_GetObjectItemCaseSensitive(user, "status");
-                if (cJSON_IsString(username) && cJSON_IsString(status)) {
-                    // Aquí se debería agregar el usuario y su estado al hash table
-                }
-            }
+        cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
+        if (!cJSON_IsObject(users)) {
+            fprintf(stderr, "Error: 'users' is not an object\n");
+            cJSON_Delete(json);
+            message.type = INVALID;
         }
 
-        
-        // Aquí se podría inicializar un hash table para almacenar los usuarios y sus estados.
+        GHashTable *dict = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+
+        cJSON *user;
+        cJSON_ArrayForEach(user, users) {
+            if (cJSON_IsString(user)) {
+                const char *username = user->string;
+                const char *status = cJSON_GetStringValue(user);
+                g_hash_table_insert(dict, g_strdup(username), g_strdup(status));
+            }
+        }
+        message.connections = dict;
 
     } else if (strcmp(type->valuestring, "TEXT") == 0) {
         message.type = TEXT;
@@ -547,6 +554,11 @@ Message parseInput(const char *input) {
             msg.type = INVALID;
         }
     } 
+
+    else if (g_strcmp0(parts[0], "\\getUsers") == 0) {
+        msg.type = USERS;
+    } 
+
     // Comando \setStatus
     else if (g_strcmp0(parts[0], "\\setStatus") == 0) {
         msg.type = STATUS;
