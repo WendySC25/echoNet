@@ -3,6 +3,8 @@
 #include <glib.h>
 #include <stdio.h>
 
+#define MAX_ROOM_MEMBERS 15
+
 const char* operationToString(Operation operation) {
     switch(operation) {
         case OP_IDENTIFY:      return "IDENTIFY";
@@ -141,10 +143,13 @@ char* toJSON(Message* message) {
 
         case INVITE:
             cJSON_AddStringToObject(json, "type", "INVITE");
-            // cJSON_AddStringToObject(json, "roomname", message->roomname);
-            // cJSON *users = cJSON_AddArrayToObject(json, "usernames");
-            // for (int i = 0; message->usernames[i] != NULL; i++) 
-            //         cJSON_AddItemToArray(users, cJSON_CreateString(message->usernamesInvitation[i]));
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
+            cJSON *invitation = cJSON_AddArrayToObject(json, "usernames");
+            
+            for (guint i = 0; i < message->usernamesInvitation->len; i++) {
+                const char *username = g_array_index(message->usernamesInvitation, const char *, i);
+                cJSON_AddItemToArray(invitation, cJSON_CreateString(username));
+            }
             break;
         
         case INVITATION:
@@ -171,16 +176,16 @@ char* toJSON(Message* message) {
         
         case ROOM_USER_LIST:
             cJSON_AddStringToObject(json, "type", "ROOM_USER_LIST");
-            // cJSON *users = cJSON_AddObjectToObject(json, "users");
+            cJSON_AddStringToObject(json, "roomname", message->roomname);
 
-            // GHashTableIter iter;
-            // gpointer key, value;
-            // g_hash_table_iter_init(&iter, message->chat_rooms->clients);
-            // while (g_hash_table_iter_next(&iter, &key, &value)) {
-            //     Connection *conn = (Connection *)value;
-            //     if (conn && conn->user && conn->user->username) 
-            //         cJSON_AddStringToObject(users, conn->user->username, conn->user->status);
-            // }
+            cJSON *roomUsers = cJSON_AddObjectToObject(json, "users");
+
+            GHashTableIter iterChatRoom;
+            gpointer keyUser, valueStatus;
+            g_hash_table_iter_init(&iterChatRoom, message->chat_rooms);
+            while (g_hash_table_iter_next(&iterChatRoom, &keyUser, &valueStatus)) 
+                cJSON_AddStringToObject(roomUsers, (char*)keyUser, (char*)valueStatus);
+
             break;
 
 
@@ -300,6 +305,8 @@ Message getMessage(char* jsonString) {
         
         message.type = USER_LIST;
 
+        // LIBERAR MEMORIA NO LO OLVIDESSSSS
+
         cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
         if (!cJSON_IsObject(users)) {
             fprintf(stderr, "Error: 'users' is not an object\n");
@@ -374,18 +381,24 @@ Message getMessage(char* jsonString) {
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
         const cJSON *usernames = cJSON_GetObjectItemCaseSensitive(json, "usernames");
 
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
-        
+            message.roomname[sizeof(message,roomname) - 1] = '\0'; 
+        }
+
         if (cJSON_IsArray(usernames)) {
-            // Aquí se debería inicializar un arreglo o lista para los nombres de usuario
+
+            // NO OLVIDER LIBERAR LA MEMEORIAAAAAA
+            message.usernamesInvitation = g_array_new(FALSE, TRUE, sizeof(char*));
+
             cJSON *username;
             cJSON_ArrayForEach(username, usernames) {
                 if (cJSON_IsString(username)) {
-                    // Aquí se debería agregar el nombre de usuario al arreglo o lista
+                    char *username_str = g_strdup(username->valuestring);
+                    g_array_append_val(message.usernamesInvitation, username_str);
                 }
             }
-        }
+        } 
 
     } else if (strcmp(type->valuestring, "INVITATION") == 0) {
         message.type = INVITATION;
@@ -426,20 +439,28 @@ Message getMessage(char* jsonString) {
         // Similar al caso "USER_LIST", se podría inicializar un hash table para almacenar los usuarios y sus estados.
 
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
-        const cJSON *usernames = cJSON_GetObjectItemCaseSensitive(json, "usernames");
 
         if (cJSON_IsString(roomname)) 
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
         
-        if (cJSON_IsArray(usernames)) {
-            // Aquí se debería inicializar un arreglo o lista para los nombres de usuario
-            cJSON *username;
-            cJSON_ArrayForEach(username, usernames) {
-                if (cJSON_IsString(username)) {
-                    // Aquí se debería agregar el nombre de usuario al arreglo o lista
-                }
+        cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
+        if (!cJSON_IsObject(users)) {
+            fprintf(stderr, "Error: 'users' is not an object\n");
+            cJSON_Delete(json);
+            message.type = INVALID;
+        }
+
+        GHashTable *dict = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+
+        cJSON *user;
+        cJSON_ArrayForEach(user, users) {
+            if (cJSON_IsString(user)) {
+                const char *username = user->string;
+                const char *status = cJSON_GetStringValue(user);
+                g_hash_table_insert(dict, g_strdup(username), g_strdup(status));
             }
         }
+        message.chat_rooms = dict;
 
     } else if (strcmp(type->valuestring, "ROOM_TEXT") == 0) {
         message.type = ROOM_TEXT;
@@ -569,6 +590,73 @@ Message parseInput(const char *input) {
         }
     } 
 
+    //Manejar bien que el nombr epuede estar divido REVISARRRRR NO OLVODARRRRRR
+
+    else if (g_strcmp0(parts[0], "\\newRoom") == 0) {
+        msg.type = NEW_ROOM;
+        if (parts[1] != NULL) {
+            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+        } else {
+            msg.type = INVALID;
+        }
+    } 
+
+    else if (g_strcmp0(parts[0], "\\invite") == 0) {
+        msg.type = INVITE;
+        if (parts[1] != NULL) {
+            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+
+            msg.usernamesInvitation = g_array_new(FALSE, FALSE, sizeof(char*));
+
+            for (int i = 2; parts[i] != NULL; i++) {
+                // Copiar el nombre de usuario en una nueva cadena
+                char* username = g_strdup(parts[i]);
+                g_array_append_val(msg.usernamesInvitation, username);
+            }
+
+            
+        } else {
+            msg.type = INVALID;
+            
+        }
+    }
+
+    else if (g_strcmp0(parts[0], "\\messageRoom") == 0) {
+        msg.type = ROOM_TEXT;
+        
+        if (parts[1] != NULL) {
+            // El nombre de usuario es la segunda parte
+            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+
+            // El mensaje es todo lo que sigue después del nombre de usuario
+            gchar *message = g_strjoinv(" ", &parts[2]);
+            if (message != NULL) {
+                g_strlcpy(msg.text, message, sizeof(msg.text));
+                g_free(message);
+            } else {
+                msg.type = INVALID;
+            }
+        } else {
+            msg.type = INVALID;
+        }
+    }
+
+    else if (g_strcmp0(parts[0], "\\getRoomUsers") == 0) {
+        msg.type = ROOM_USERS;
+         if (parts[1] != NULL) g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+         else msg.type = INVALID;
+    } 
+
+    else if (g_strcmp0(parts[0], "\\leaveRoom") == 0) {
+        msg.type = LEAVE_ROOM;
+        if (parts[1] != NULL) {
+            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+        } else {
+            msg.type = INVALID;
+        }
+    } 
+
+    
     else if (g_strcmp0(parts[0], "\\bye") == 0) {
         msg.type = DISCONNECT;
     } 

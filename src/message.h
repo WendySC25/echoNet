@@ -74,7 +74,7 @@ typedef struct {
     char         roomname[17];
     char         text[256];
 
-    char **usernamesInvitation; 
+    GArray* usernamesInvitation; 
 
     GHashTable *connections;
     GHashTable *chat_rooms;
