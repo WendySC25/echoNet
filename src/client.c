@@ -150,13 +150,13 @@ void handleUserList(GHashTable *connections) {
 
 void handleInvitation(const char *username, const char *roomname, struct Connection* connection){
     printf("%s invite you to a room %s\n", username, roomname );
-    Message msg = { .type = JOIN_ROOM };
+    // Message msg = { .type = JOIN_ROOM };
 
-    strncpy(msg.roomname, roomname, sizeof(msg.roomname) - 1);
-    msg.roomname[sizeof(msg.roomname) - 1] = '\0';
+    // strncpy(msg.roomname, roomname, sizeof(msg.roomname) - 1);
+    // msg.roomname[sizeof(msg.roomname) - 1] = '\0';
 
-    fprintf(connection->out, "%s\n", toJSON(&msg));
-    fflush(connection->out);
+    // fprintf(connection->out, "%s\n", toJSON(&msg));
+    // fflush(connection->out);
 
 }
 
