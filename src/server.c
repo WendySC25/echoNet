@@ -254,6 +254,12 @@ void *receiveMessages(void *arg) {
             // }
 
             Message message = getMessage(buffer);
+
+            if(message.type != IDENTIFY && (strcmp(connection->user->username, "newuser") == 0)){
+                handlesUnidentifiedUser(server, &message, connection);
+                continue;
+            }
+
             switch (message.type) {
 
             case IDENTIFY:

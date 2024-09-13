@@ -19,4 +19,6 @@ void disconnectUser(struct Server* server, Message* message,  struct Connection*
 void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Server* server, struct Connection* connection);
 void imprimeCONTROL(char* message);
 
+void handlesUnidentifiedUser(struct Server* server, Message* message,  struct Connection* connection);
+
 #endif

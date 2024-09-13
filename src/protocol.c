@@ -9,8 +9,24 @@ void imprimeCONTROL(char* message){
     printf("Este mensaje será enviado: %s\n", message);
 }
 
+void handlesUnidentifiedUser(struct Server* server, Message* message,  struct Connection* connection){
+     Message serverResponse = {
+        .type = RESPONSE,
+        .operation = OP_INVALID,
+        .result = RE_NOT_IDENTIFIED
+    };
+
+    sendTo(toJSON(&serverResponse), connection);
+    freeConnection(connection);
+}
+
 
 void identifyUser(struct Server* server, Message* message, struct Connection* connection) {
+
+    //EVITAR QUE EL USUARIO IDENTIFICADO ÉXITOSAMENTE SE VUELVA A REGISTRAR CON OTRO NOMBRE
+    if(strcmp(connection->user->username, "newuser") != 0) {
+        return;
+    }
 
     Message serverResponse = {
         .type = RESPONSE,
@@ -38,15 +54,9 @@ void identifyUser(struct Server* server, Message* message, struct Connection* co
     connection->user = user;
 
     add_connection(server, message->username, connection);
-
-    //g_hash_table_insert(server->connections, message->username, connection);
-    imprimeCONTROL(toJSON(&serverResponse));
-
     sendTo(toJSON(&serverResponse), connection);
-    
-    imprimeCONTROL(toJSON(&notifyNewUser));
     sendToGlobalChat(toJSON(&notifyNewUser), connection->acceptedSocketFD, server);
-
+    
 
 }
 
@@ -72,7 +82,7 @@ void changeStatus(struct Server* server, Message* message, struct Connection* co
     newStatusMessage.username[sizeof(newStatusMessage.username) - 1] = '\0';
 
     newStatusMessage.status = message->status;
-    
+
     // strncpy(newStatusMessage.status, message->status, sizeof(newStatusMessage.status) - 1);
     // newStatusMessage.status[sizeof(newStatusMessage.status) - 1] = '\0';
 

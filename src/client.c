@@ -15,7 +15,7 @@ void *receiveMessageFromServer(void *arg);
 struct Connection* connetNewClient(char *ip, int port);
 void handleReciveMessage(char* buffer, struct Connection* conection);
 void handleNewUser(const char *username);
-void handleServerResponse(Message msg);
+void handleServerResponse(Message msg, struct Connection* connection);
 void handlePublicMessage(const char *username, const char *text);
 void handleNewStatus(const char *username, const char *status);
 void handleUserList(GHashTable *connections);
@@ -49,29 +49,6 @@ struct Connection* connetNewClient(char *ip, int port){
 }
 
 void sentMessageToServer(struct Connection* connection) {
-
-    //REVISAR
-    // char *name = NULL;
-    // size_t nameSize = 0;
-    // printf("Please enter your name?\n");
-    // ssize_t nameCount = getline(&name, &nameSize, stdin);
-
-    // if (nameCount > 0) {
-    //     name[nameCount - 1] = '\0';
-
-    //     // Aqui debe crear un mensaje
-    //     Message message = {
-    //         .type = IDENTIFY,
-    //     };
-
-    //     strncpy(message.username, name, sizeof(message.username) - 1);
-    //     message.username[sizeof(message.username) - 1] = '\0';
-
-    //     connection->user = newUser(name);
-
-    //     fprintf(connection->out, "%s\n", toJSON(&message));
-    //     fflush(connection->out);
-    // }
 
     char *line = NULL;
     size_t lineSize = 0;
@@ -129,8 +106,16 @@ void handleNewStatus(const char *username, const char *status) {
     printf("%s change status to: %s.\n", username, status);
 }
 
-void handleServerResponse(Message msg) {
-   
+void handleServerResponse(Message msg, struct Connection* connection ) {
+    if(msg.operation == OP_IDENTIFY && msg.result == RE_SUCCESS) {
+        connection->user = newUser(msg.extra);
+        printf("HEY! ESTO SE LOGRO. NOMBRE REGISTRADO %s \n",connection->user->username);
+    }
+
+    if(msg.operation == OP_INVALID) {
+        exit(EXIT_SUCCESS);
+    }
+
     printf("%s \n", toJSON(&msg));
 }
 
@@ -232,7 +217,7 @@ void handleReciveMessage(char* buffer, struct Connection* conection) {
             break;
         
         case RESPONSE:
-            handleServerResponse(message);
+            handleServerResponse(message, conection);
             break;
 
         case INVITATION:

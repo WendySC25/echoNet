@@ -76,7 +76,8 @@ char* toJSON(Message* message) {
             cJSON_AddStringToObject(json, "type",      "RESPONSE");
             cJSON_AddStringToObject(json, "operation", operationToString(message->operation));
             cJSON_AddStringToObject(json, "result",    resultToString(message->result));
-            cJSON_AddStringToObject(json, "extra",     message->extra);
+            if(message->operation != OP_INVALID)
+                cJSON_AddStringToObject(json, "extra",     message->extra);
             break;
 
         case STATUS:
@@ -264,8 +265,10 @@ Message getMessage(char* jsonString) {
         if (cJSON_IsString(result)) 
             message.result = getResult(result->valuestring);
 
-        if (cJSON_IsString(extra)) 
-            strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
+        if(message.operation != OP_INVALID) {
+            if (cJSON_IsString(extra)) 
+                strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
+        }
 
     } else if (strcmp(type->valuestring, "IDENTIFY") == 0) {
         message.type = IDENTIFY;
