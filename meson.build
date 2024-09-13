@@ -23,7 +23,8 @@ servidor_sources = common_sources + [
 cliente_sources = common_sources + [
   src_dir / 'client.c',
   src_dir / 'server.c',
-  src_dir / 'user.c'
+  src_dir / 'user.c',
+  src_dir / 'clientInterface.c'
 ]
 
 # Encuentra la dependencia de GLib

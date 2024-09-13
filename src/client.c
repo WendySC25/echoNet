@@ -9,24 +9,17 @@
 #include "server.h" 
 #include "message.h"
 #include <signal.h>
+#include "clientInterface.h"
 
 volatile sig_atomic_t signal_received = 0;  
+
+
 
 void sentMessageToServer(struct Connection* connection);
 void createReceiveMessageThreadClient(struct Connection* connection);
 void *receiveMessageFromServer(void *arg);
 struct Connection* connetNewClient(char *ip, int port);
 void handleReciveMessage(char* buffer, struct Connection* conection);
-void handleNewUser(const char *username);
-void handleServerResponse(Message msg, struct Connection* connection);
-void handlePublicMessage(const char *username, const char *text);
-void handleNewStatus(const char *username, const char *status);
-void handleUserList(GHashTable *connections);
-void handleInvitation(const char *username, const char *roomname, struct Connection* connection);
-void handleJoinedRoom(const char *username, const char *roomname);
-void handleRoomText(const char *username, const char *roomname, const char *text);
-void handleRoomUserList(GHashTable *connections, const char *roomname);
-void handleLeftRoom(const char *username, const char *roomname );
 void handle_sigint(int sig);
 
 
@@ -56,7 +49,7 @@ void sentMessageToServer(struct Connection* connection) {
 
     char *line = NULL;
     size_t lineSize = 0;
-    printf("Type and we will send (type exit)...\n");
+    // printf("Type and we will send (type exit)...\n");
 
     char buffer[1024];
 
@@ -74,7 +67,7 @@ void sentMessageToServer(struct Connection* connection) {
         }
 
         ssize_t charCount = getline(&line, &lineSize, stdin);
-        if (charCount > 0) {x   `
+        if (charCount > 0) {
 
             line[charCount - 1] = '\0'; 
 
@@ -111,97 +104,9 @@ void createReceiveMessageThreadClient(struct Connection* connection) {
     pthread_detach(id);
 }
 
-
-void handleNewUser(const char *username) {
-    //Andir nuevo ususario a la lista de usuarios conectados.
-    printf("%s enter the chat.\n", username);
-}
-
-void handleNewStatus(const char *username, const char *status) {
-    //Andir nuevo ususario a la lista de usuarios conectados.
-    printf("%s change status to: %s.\n", username, status);
-}
-
-void handleServerResponse(Message msg, struct Connection* connection ) {
-    if(msg.operation == OP_IDENTIFY && msg.result == RE_SUCCESS) {
-        connection->user = newUser(msg.extra);
-        printf("HEY! ESTO SE LOGRO. NOMBRE REGISTRADO %s \n",connection->user->username);
-    }
-
-    if(msg.operation == OP_INVALID) {
-        exit(EXIT_SUCCESS);
-    }
-
-    printf("%s \n", toJSON(&msg));
-}
-
-void handlePrivateMessage(const char *username, const char *text){
-    printf(" %s whispered to you: %s\n", username, text);
-}
-
-void handlePublicMessage(const char *username, const char *text){
-    printf(" %s sent to global chat: %s\n", username, text);
-}
-
-void handleDisconnection(const char *username){
-    printf(" %s leave the chat :( \n", username);
-}
-
-void handleUserList(GHashTable *connections) {
-
-    if (g_hash_table_size(connections) == 0) {
-        printf("No hay usuarios conectados. Eres tú y la soledad :( \n");
-        return;
-    }
-
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, connections);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        printf("Username: %s, Status: %s\n", (char *)key, (char *)value);
-    }
-    g_hash_table_destroy(connections);
-
-}
-
-void handleInvitation(const char *username, const char *roomname, struct Connection* connection){
-    printf("%s invite you to a room %s\n", username, roomname );
-
-}
-
-void handleJoinedRoom(const char *username, const char *roomname){
-    printf("%s enter the room %s\n", username, roomname );
-}
-
-void handleRoomText(const char *username, const char *roomname, const char *text){
-    printf("%s sent to  room %s : %s\n", username, roomname, text);
-
-}
-
-void handleRoomUserList(GHashTable *connections, const char *roomname) {
-
-    if (g_hash_table_size(connections) == 0) {
-        printf("No hay usuarios conectados en SALA %s. Eres tú y la soledad :( \n", roomname);
-        return;
-    }
-
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, connections);
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        printf("Username: %s, Status: %s\n", (char *)key, (char *)value);
-    }
-    g_hash_table_destroy(connections);
-
-}
-
-void handleLeftRoom(const char *username, const char *roomname ){
-    printf(" %s leave the %s :( \n", username, roomname);
-}
-
 void handleReciveMessage(char* buffer, struct Connection* conection) {
 
-    printf("ESTO VIENE DEL SERVIDOR: %s \n", buffer);
+    printf("MENSAJE DEL SERVIDOR: %s \n", buffer);
     Message message = getMessage(buffer);
 
     switch (message.type) {
@@ -252,7 +157,6 @@ void handleReciveMessage(char* buffer, struct Connection* conection) {
         case DISCONNECTED:
             handleDisconnection(message.username);
             break;
-        
             
         default:
             // handleUnknownMessage();
