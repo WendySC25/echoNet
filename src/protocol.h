@@ -16,7 +16,7 @@ void listRoomUsers(struct Server* server,  Message* message,  struct Connection*
 void sendRoomMessage(struct Server* server, Message* message,  struct Connection* connection);
 void leaveRoom(struct Server* server,Message* message,  struct Connection* connection);
 void disconnectUser(struct Server* server, Message* message,  struct Connection* connection);
-void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Server* server);
+void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Server* server, struct Connection* connection);
 void imprimeCONTROL(char* message);
 
 #endif

@@ -294,7 +294,7 @@ void joinRoom(struct Server* server, Message* message, struct Connection* connec
 
     strncpy(joinNotification.username, connection->user->username, sizeof(joinNotification.username) - 1);
     joinNotification.username[sizeof(joinNotification.username) - 1] = '\0';
-    sendRoomMessageToAll(room_members, &joinNotification, server);
+    sendRoomMessageToAll(room_members, &joinNotification, server, connection);
 
     Message response = {
         .type = RESPONSE,
@@ -308,7 +308,7 @@ void joinRoom(struct Server* server, Message* message, struct Connection* connec
     g_mutex_unlock(&(server->room_mutex));
 }
 
-void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Server* server) {
+void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Server* server, struct Connection* connection) {
     GHashTableIter iter;
     gpointer key, value;
     g_hash_table_iter_init(&iter, room_members);
@@ -316,6 +316,7 @@ void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Ser
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         const char* username = (const char*)key;
         struct Connection* conn = (struct Connection*)g_hash_table_lookup(server->connections, username);
+        if (conn->acceptedSocketFD == connection->acceptedSocketFD) continue;
         if (conn) {
             sendTo(toJSON(message), conn);
         }
@@ -430,7 +431,7 @@ void sendRoomMessage(struct Server* server, Message* message, struct Connection*
     strncpy(roomMessage.text, message->text, sizeof(roomMessage.text) - 1);
     roomMessage.text[sizeof(roomMessage.text) - 1] = '\0';
 
-    sendRoomMessageToAll(room_members, &roomMessage, server);
+    sendRoomMessageToAll(room_members, &roomMessage, server, connection);
 
     g_mutex_unlock(&(server->room_mutex));
 }
@@ -480,7 +481,7 @@ void leaveRoom(struct Server* server, Message* message, struct Connection* conne
 
     strncpy(leaveNotification.username, connection->user->username, sizeof(leaveNotification.username) - 1);
     leaveNotification.username[sizeof(leaveNotification.username) - 1] = '\0';
-    sendRoomMessageToAll(room_members, &leaveNotification, server);
+    sendRoomMessageToAll(room_members, &leaveNotification, server, connection);
 
     g_mutex_unlock(&(server->room_mutex));
 }
