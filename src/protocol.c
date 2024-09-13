@@ -225,39 +225,39 @@ void inviteToRoom(struct Server* server, Message* message, struct Connection* co
     }
 
     for (guint i = 0; i < message->usernamesInvitation->len; i++) {
-    const char* invited_user = g_array_index(message->usernamesInvitation, const char*, i);
-    struct Connection* invited_connection = (struct Connection*)g_hash_table_lookup(server->connections, invited_user);
-    
-    if (invited_connection == NULL) {
-        Message response = {
-            .type = RESPONSE,
-            .operation = OP_INVITE,
-            .result = RE_NO_SUCH_USER,
+        const char* invited_user = g_array_index(message->usernamesInvitation, const char*, i);
+        struct Connection* invited_connection = (struct Connection*)g_hash_table_lookup(server->connections, invited_user);
+        
+        if (invited_connection == NULL) {
+            Message response = {
+                .type = RESPONSE,
+                .operation = OP_INVITE,
+                .result = RE_NO_SUCH_USER,
+            };
+            strncpy(response.extra, invited_user, sizeof(response.extra) - 1);
+            response.extra[sizeof(response.extra) - 1] = '\0';
+            sendTo(toJSON(&response), connection);
+            continue;
+        }
+
+        if (g_hash_table_contains(room_members, invited_user)) {
+            continue; // Usuario ya está en la sala o ya fue invitado
+        }
+
+        g_hash_table_insert(room_members, g_strdup(invited_user), g_strdup("INVITED"));
+
+        // Enviar invitación al usuario
+        Message invite = {
+            .type = INVITATION,
         };
-        strncpy(response.extra, invited_user, sizeof(response.extra) - 1);
-        response.extra[sizeof(response.extra) - 1] = '\0';
-        sendTo(toJSON(&response), connection);
-        continue;
+
+        strncpy(invite.roomname, message->roomname, sizeof(invite.roomname) - 1);
+        invite.roomname[sizeof(invite.roomname) - 1] = '\0';
+
+        strncpy(invite.username, connection->user->username, sizeof(invite.username) - 1);
+        invite.username[sizeof(invite.username) - 1] = '\0';
+        sendTo(toJSON(&invite), invited_connection);
     }
-
-    if (g_hash_table_contains(room_members, invited_user)) {
-        continue; // Usuario ya está en la sala o ya fue invitado
-    }
-
-    g_hash_table_insert(room_members, g_strdup(invited_user), g_strdup("INVITED"));
-
-    // Enviar invitación al usuario
-    Message invite = {
-        .type = INVITATION,
-    };
-
-    strncpy(invite.roomname, message->roomname, sizeof(invite.roomname) - 1);
-    invite.roomname[sizeof(invite.roomname) - 1] = '\0';
-
-    strncpy(invite.username, connection->user->username, sizeof(invite.username) - 1);
-    invite.username[sizeof(invite.username) - 1] = '\0';
-    sendTo(toJSON(&invite), invited_connection);
-}
 
 
     g_mutex_unlock(&(server->room_mutex));
@@ -329,11 +329,15 @@ void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Ser
 
     while (g_hash_table_iter_next(&iter, &key, &value)) {
         const char* username = (const char*)key;
+        const char* status = (const char*)value;
+
         struct Connection* conn = (struct Connection*)g_hash_table_lookup(server->connections, username);
         if (conn->acceptedSocketFD == connection->acceptedSocketFD) continue;
-        if (conn) {
-            sendTo(toJSON(message), conn);
-        }
+        if (strcmp(status, "INVITED") != 0) 
+            if (conn) 
+                sendTo(toJSON(message), conn);
+            
+    
     }
 }
 
@@ -501,6 +505,38 @@ void leaveRoom(struct Server* server, Message* message, struct Connection* conne
 }
 
 void disconnectUser(struct Server* server, Message* message, struct Connection* connection) {
+
+    g_mutex_lock(&(server->room_mutex));
+
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, server->chat_rooms);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+        GHashTable* room_members = (GHashTable*)value;
+
+        if (g_hash_table_contains(room_members, connection->user->username)) {
+            g_hash_table_remove(room_members, connection->user->username);
+
+            Message leaveNotification = {
+                .type = LEFT_ROOM,
+            };
+
+            strncpy(leaveNotification.roomname, (const char*)key, sizeof(leaveNotification.roomname) - 1);
+            leaveNotification.roomname[sizeof(leaveNotification.roomname) - 1] = '\0';
+
+            strncpy(leaveNotification.username, connection->user->username, sizeof(leaveNotification.username) - 1);
+            leaveNotification.username[sizeof(leaveNotification.username) - 1] = '\0';
+
+            sendRoomMessageToAll(room_members, &leaveNotification, server, connection);
+
+            if (g_hash_table_size(room_members) == 0) {
+                g_hash_table_destroy(room_members);
+                g_hash_table_remove(server->chat_rooms, key);
+            }
+        }
+    }
+
     Message serverResponse = {
         .type = DISCONNECTED,
     };
@@ -508,7 +544,10 @@ void disconnectUser(struct Server* server, Message* message, struct Connection* 
     serverResponse.username[sizeof(serverResponse.username) - 1] = '\0';
 
     sendToGlobalChat(toJSON(&serverResponse), connection->acceptedSocketFD, server);
-    remove_connection(server, connection);
 
+    g_mutex_unlock(&(server->room_mutex));
+
+    remove_connection(server, connection);
 }
+
 

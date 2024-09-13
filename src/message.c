@@ -688,6 +688,18 @@ Message parseInput(const char *input) {
         }
     }
 
+     else if (g_strcmp0(parts[0], "\\acceptInvitation") == 0) {
+        msg.type = JOIN_ROOM;
+
+        if (parts[1] != NULL) {
+            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+
+        } else {
+            msg.type = INVALID;
+            
+        }
+    }
+
     //hey TEN CUIDADO CON SALAS DE NOMBRES CON ESPACIOS
     else if (g_strcmp0(parts[0], "\\messageRoom") == 0) {
         msg.type = ROOM_TEXT;
