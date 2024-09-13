@@ -59,8 +59,10 @@ void changeStatus(struct Server* server, Message* message, struct Connection* co
     }
 
     // Actualizar el estado del usuario
-    strncpy(conn->user->status, message->status, sizeof(conn->user->status) - 1);
-    conn->user->status[sizeof(conn->user->status) - 1] = '\0';
+    // strncpy(conn->user->status, message->status, sizeof(conn->user->status) - 1);
+    // conn->user->status[sizeof(conn->user->status) - 1] = '\0';
+
+    conn->user->status = message->status;
 
     Message newStatusMessage = {
         .type = NEW_STATUS,
@@ -69,8 +71,10 @@ void changeStatus(struct Server* server, Message* message, struct Connection* co
     strncpy(newStatusMessage.username, message->username, sizeof(newStatusMessage.username) - 1);
     newStatusMessage.username[sizeof(newStatusMessage.username) - 1] = '\0';
 
-    strncpy(newStatusMessage.status, message->status, sizeof(newStatusMessage.status) - 1);
-    newStatusMessage.status[sizeof(newStatusMessage.status) - 1] = '\0';
+    newStatusMessage.status = message->status;
+    
+    // strncpy(newStatusMessage.status, message->status, sizeof(newStatusMessage.status) - 1);
+    // newStatusMessage.status[sizeof(newStatusMessage.status) - 1] = '\0';
 
     sendToGlobalChat(toJSON(&newStatusMessage), connection->acceptedSocketFD, server);
     

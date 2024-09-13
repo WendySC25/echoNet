@@ -6,6 +6,7 @@
 #include <string.h>
 #include <glib.h>
 #include "server.h"
+#include "user.h"
 
 #include "../third_party/cJSON/cJSON.h"
 
@@ -68,9 +69,9 @@ typedef struct {
     Type  type;
     Operation    operation;
     Result       result;
+    UserStatus   status;
     char         extra[256];
     char         username[9];
-    char         status[6];
     char         roomname[17];
     char         text[256];
 

@@ -99,7 +99,6 @@ void sentMessageToServer(struct Connection* connection) {
         }
     }
 
-    free(name);
     free(line);
 }
 
@@ -225,7 +224,7 @@ void handleReciveMessage(char* buffer, struct Connection* conection) {
             break;
         
         case NEW_STATUS:
-            handleNewStatus(message.username, message.status);
+            handleNewStatus(message.username, UserStatusToString(message.status));
             break;
         
         case USER_LIST:

@@ -10,28 +10,6 @@
 
 #define MAX_USERNAME_LENGTH 8
 
-//Clases temporales para hacer pruebas unitarias
-typedef enum {
-    ONLINE,
-    AWAY,
-    BUSY
-} UserStatus;
-
-typedef struct {
-    char username[MAX_USERNAME_LENGTH + 1];  
-    UserStatus status; 
-    int socketFD;      
-} User;
-
-User createUser(const char *username, UserStatus status, int socketFD) {
-    User user;
-    strncpy(user.username, username, MAX_USERNAME_LENGTH);
-    user.username[MAX_USERNAME_LENGTH] = '\0';
-    user.status = status;
-    user.socketFD = socketFD;
-    return user;
-}
-
 void setUp(void) {
     // stuff
 

@@ -81,13 +81,13 @@ char* toJSON(Message* message) {
 
         case STATUS:
             cJSON_AddStringToObject(json, "type", "STATUS");
-            cJSON_AddStringToObject(json, "status", message->status);
+            cJSON_AddStringToObject(json, "status", UserStatusToString(message->status));
             break;
         
         case NEW_STATUS:
             cJSON_AddStringToObject(json, "type", "NEW_STATUS");
             cJSON_AddStringToObject(json, "username", message->username);
-            cJSON_AddStringToObject(json, "status", message->status);
+            cJSON_AddStringToObject(json, "status",  UserStatusToString(message->status));
             break;
 
 
@@ -106,7 +106,7 @@ char* toJSON(Message* message) {
             while (g_hash_table_iter_next(&iter, &key, &value)) {
                 struct Connection *conn = (struct Connection *)value;
                 if (conn && conn->user && conn->user->username) 
-                    cJSON_AddStringToObject(users, conn->user->username, conn->user->status);
+                    cJSON_AddStringToObject(users, conn->user->username,  UserStatusToString(conn->user->status));
             }
 
             break;
@@ -286,7 +286,7 @@ Message getMessage(char* jsonString) {
         const cJSON *status = cJSON_GetObjectItemCaseSensitive(json, "status");
 
         if (cJSON_IsString(status)) 
-            strncpy(message.status, status->valuestring, sizeof(message.status)-1);
+            message.status = getUserStatus(status->valuestring);
 
     } else if (strcmp(type->valuestring, "NEW_STATUS") == 0) {
         message.type = NEW_STATUS;
@@ -296,8 +296,8 @@ Message getMessage(char* jsonString) {
         if (cJSON_IsString(username)) 
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
         
-        if (cJSON_IsString(status)) 
-            strncpy(message.status, status->valuestring, sizeof(message.status)-1);
+         if (cJSON_IsString(status)) 
+            message.status = getUserStatus(status->valuestring);
 
     } else if (strcmp(type->valuestring, "USERS") == 0) {
         message.type = USERS;
@@ -585,7 +585,7 @@ Message parseInput(const char *input) {
     else if (g_strcmp0(parts[0], "\\setStatus") == 0) {
         msg.type = STATUS;
         if (parts[1] != NULL) {
-            g_strlcpy(msg.status, parts[1], sizeof(msg.status));
+            msg.status = getUserStatus(parts[1]);
         } else {
             msg.type = INVALID;
         }
