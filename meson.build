@@ -1,32 +1,41 @@
-project('echoNet', 'c')
+project('echoNet', 'c',
+  version: '1.0',
+  default_options: ['warning_level=3', 'c_std=c11'])
 
-# Directories
+# Define los directorios
 src_dir = 'src'
-test_dir = 'tests'
-unity_dir = 'third_party/unity/src'
+cjson_dir = 'third_party/cJSON'
 
-# Code files
-src_files = files(
-    join_paths(src_dir, 'server.c')
-)
-test_files = files(
-    join_paths(test_dir, 'test_server.c')
-)
+# Define las fuentes comunes
+common_sources = [
+  src_dir / 'message.c',
+  cjson_dir / 'cJSON.c',
+  src_dir / 'protocol.c'
+]
 
-# Unity files
-unity_files = files(
-    join_paths(unity_dir, 'unity.c')
-)
+# Define las fuentes específicas para cada ejecutable
+servidor_sources = common_sources + [
+  src_dir / 'chat.c',
+  src_dir / 'server.c',
+  src_dir / 'user.c'
+]
 
-include_dirs = include_directories(src_dir, unity_dir)
-unity_lib = static_library('unity', unity_files, 
-                            include_directories: include_dirs)
+cliente_sources = common_sources + [
+  src_dir / 'client.c',
+  src_dir / 'server.c',
+  src_dir / 'user.c'
+]
 
-# Executable test files
-test_exe = executable('test_my_code', test_files + src_files,
-                      include_directories: include_dirs,
-                      link_with: unity_lib)
+# Encuentra la dependencia de GLib
+glib_dep = dependency('glib-2.0', required: true)
 
-# Test
-test('unit_test', test_exe)
+# Define el ejecutable 'servidorR' con la dependencia de GLib
+executable('servidorR',
+  sources: servidor_sources,
+  dependencies: glib_dep)
+
+# Define el ejecutable 'clienteR' con la dependencia de GLib
+executable('clienteR',
+  sources: cliente_sources,
+  dependencies: glib_dep)
 

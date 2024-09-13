@@ -65,10 +65,16 @@ struct Server* newServer(int port) {
         g_str_hash,           // Función de hash para cadenas
         g_str_equal,          // Función de comparación para cadenas
         g_free,               // Función para liberar las claves (serán cadenas duplicadas)
-        (GDestroyNotify)free  // Función para liberar los valores (estructuras Connection)
+        freeConnection  // Función para liberar los valores (estructuras Connection)
     );
 
-    server->chat_rooms = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify) g_hash_table_destroy);
+    server->chat_rooms = g_hash_table_new_full(
+        g_str_hash, 
+        g_str_equal, 
+        g_free, 
+        (GDestroyNotify) g_hash_table_destroy
+    );
+
     g_mutex_init(&(server->room_mutex));
     
     return server;
@@ -131,44 +137,79 @@ void startServer(struct Server* server) {
                 createReceiveMessageThread(clientSocket, server);
             } else {
                 printf("Maximum number of connections reached.\n");
-                free(clientSocket);
+                // // free(clientSocket);
             }
         } else if (clientSocket) {
-            free(clientSocket);
+            // //free(clientSocket);
         }
     }
 }
 
-void freeConnection(struct Connection* connection) {
-    fclose(connection->in);
-    fclose(connection->out);
-    close(connection->acceptedSocketFD);
-    freeUser(connection->user);
-    free(connection);
+void freeConnection(gpointer data) {
+    struct Connection *connection = (struct Connection *)data;
+    if (connection != NULL) {
+        // printf(" ESTO ESTA EN FREECONECTION %p", connection);
+        fclose(connection->in);
+        fclose(connection->out);
+        close(connection->acceptedSocketFD);
+        freeUser(connection->user);
+        // printf(" ESTO ESTA EN FREECONECTION ANTES DEL ERROR %p", connection);
+        //free(connection); //provoca Segmentatio fault
+    }
 }
 
+void add_connection(struct Server *server, const char *username, struct Connection *conn) {
+    g_mutex_lock(&(server->room_mutex));
 
-// void add_connection(Server *server, const char *username, Connection *conn) {
-    
-//     char *username_key = g_strdup(username);
-//     g_hash_table_insert(server->connections, username_key, conn);
-//     server->acceptedConnectionCount++;
-// }
+    char *username_key = g_strdup(username);
+    g_hash_table_insert(server->connections, username_key, conn);
+    server->acceptedConnectionCount++;
+
+    g_mutex_unlock(&(server->room_mutex));
+}
 
 // Connection *get_connection(Server *server, const char *username) {
 //     return g_hash_table_lookup(server->connections, username);
 // }
 
-// void remove_connection(Server *server, const char *username) {
-//     // Obtener la conexión y eliminarla del diccionario
-//     Connection *conn = g_hash_table_lookup(server->connections, username);
-//     if (conn != NULL) {
-//         g_hash_table_remove(server->connections, username);
-//         free(conn); // Liberar la memoria de la conexión
-//         server->acceptedConnectionCount--;
-//     }
-// }
+void remove_connection(struct Server *server, struct Connection *conn) {
+    if (server == NULL) {
+        printf("Error: El puntero server es nulo.\n");
+        return;
+    }
 
+    if (conn == NULL) {
+        printf("Error: El puntero conn es nulo.\n");
+        return;
+    }
+
+    if (conn->user == NULL) {
+        printf("Error: El puntero conn->user es nulo.\n");
+        return;
+    }
+
+    if (conn->user->username == NULL) {
+        printf("Error: El puntero conn->user->username es nulo.\n");
+        return;
+    }
+
+    printf("LLEGAMOS AQUI\n");
+    printf(" ESTO ESTA EN REMOVE %p", conn);
+
+    g_mutex_lock(&(server->room_mutex));
+
+
+    gboolean removed = g_hash_table_remove(server->connections, conn->user->username);
+
+    if (removed) {
+        printf("LLEGAMOS AQUI 2\n");
+        server->acceptedConnectionCount--;
+    } else {
+        // printf("Error: La clave no se encontró en la tabla hash.\n");
+    }
+
+    g_mutex_unlock(&(server->room_mutex));
+}
 // void free_server(Server *server) {
 //     g_hash_table_destroy(server->connections); 
 //     free(server->address);
@@ -203,7 +244,8 @@ void *receiveMessages(void *arg) {
 
     while (1) {
         if (fgets(buffer, sizeof(buffer), connection->in) != NULL) {
-            printf("Received message: %s", buffer);
+            printf("Received message: %s\n", buffer);
+
 
             // //ALGO ESTA MAL EN .getMessage
             // size_t len = strlen(buffer);
@@ -216,6 +258,51 @@ void *receiveMessages(void *arg) {
 
             case IDENTIFY:
                 identifyUser(server, &message, connection);
+                
+                break;
+
+            case STATUS:
+                changeStatus(server, &message, connection);
+                break;
+            
+            case USERS:
+                listUsers(server, &message, connection);
+                break;
+            
+            case TEXT:
+                sendPrivateMessage(server, &message, connection);
+                break;
+
+            case PUBLIC_TEXT:
+                sendPublicMessage(server, &message, connection);
+                break;
+            
+            case DISCONNECT:
+                disconnectUser(server, &message, connection);
+                break;
+
+            case NEW_ROOM:
+                createRoom(server, &message, connection);
+                break;
+
+            case INVITE:
+                inviteToRoom(server, &message, connection);
+                break;
+            
+            case JOIN_ROOM:
+                joinRoom(server, &message, connection);
+                break;
+            
+            case ROOM_TEXT:
+                sendRoomMessage(server, &message, connection);
+                break;
+            
+            case ROOM_USERS:
+                listRoomUsers(server, &message, connection);
+                break;
+            
+            case LEAVE_ROOM:
+                leaveRoom(server, &message, connection);
                 break;
 
             case INVALID:
@@ -234,10 +321,7 @@ void *receiveMessages(void *arg) {
         }
     }
 
-    fclose(connection->in);
-    fclose(connection->out);
-    close(connection->acceptedSocketFD);
-    free(data);
+    // free(data);
     return NULL;
 }
 
@@ -254,6 +338,7 @@ void sendToGlobalChat(char *buffer, int socketFD, struct Server *server) {
         }
     }
 }
+
 void sendTo(char *buffer, struct Connection* connection) {
     fprintf(connection->out, "%s\n", buffer);
     fflush(connection->out);  

@@ -9,19 +9,11 @@
 int main(int argc, char* argv[]){
 
     struct Server* server = newServer(atoi(argv[1]));
-
     if (server == NULL) {
         fprintf(stderr, "Failed to start server.\n");
         return EXIT_FAILURE;
     }
-
-    // Print a success message
-    printf("Server is up and running successfully on port %d.\n", atoi(argv[1]));
-
+    printf("Server is up and running successfully on port %d :) \n", atoi(argv[1]));
     startServer(server);
-    
     return 0;
-
-    
-
 }

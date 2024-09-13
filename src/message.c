@@ -168,6 +168,7 @@ char* toJSON(Message* message) {
             cJSON_AddStringToObject(json, "type", "JOINED_ROOM");
             cJSON_AddStringToObject(json, "roomname", message->roomname);
             cJSON_AddStringToObject(json, "username", message->username);
+            break;
 
         case ROOM_USERS:
             cJSON_AddStringToObject(json, "type", "ROOM_USERS");
@@ -594,8 +595,10 @@ Message parseInput(const char *input) {
 
     else if (g_strcmp0(parts[0], "\\newRoom") == 0) {
         msg.type = NEW_ROOM;
-        if (parts[1] != NULL) {
-            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+        gchar *message = g_strjoinv(" ", &parts[1]);
+        if (message != NULL) {
+            g_strlcpy(msg.roomname, message, sizeof(msg.roomname));
+            g_free(message);
         } else {
             msg.type = INVALID;
         }
@@ -659,6 +662,17 @@ Message parseInput(const char *input) {
     
     else if (g_strcmp0(parts[0], "\\bye") == 0) {
         msg.type = DISCONNECT;
+    }
+
+    else if (g_strcmp0(parts[0], "\\identify") == 0) {
+        msg.type = IDENTIFY;
+        gchar *message = g_strjoinv(" ", &parts[1]);
+        if (message != NULL) {
+            g_strlcpy(msg.username, message, sizeof(msg.username));
+            g_free(message);
+        } else {
+            msg.type = INVALID;
+        }
     } 
     
     else {

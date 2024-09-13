@@ -13,7 +13,7 @@
 typedef struct {
     char            username[MAX_USERNAME_LENGTH + 1];  
     char            status[MAX_USERNAME_LENGTH + 1]; 
-    GHashTable      *joined_rooms;   
+    // GHashTable      *joined_rooms;   
 
 } User;
 

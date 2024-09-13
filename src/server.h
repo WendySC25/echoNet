@@ -47,7 +47,9 @@ void createReceiveMessageThread(struct Connection *pSocket, struct Server* serve
 void *receiveMessages(void *arg);
 void sendToGlobalChat(char *buffer, int socketFD, struct Server* server);
 void sendTo(char *buffer, struct Connection* connection);
-void freeConnection(struct Connection* connection) ;
+void add_connection(struct Server *server, const char *username, struct Connection *conn);
+void freeConnection(gpointer data) ;
+void remove_connection(struct Server *server, struct Connection* connection);
 
 
 
