@@ -266,23 +266,30 @@ Message getMessage(char* jsonString) {
             message.result = getResult(result->valuestring);
 
         if(message.operation != OP_INVALID) {
-            if (cJSON_IsString(extra)) 
+            if (cJSON_IsString(extra)) {
                 strncpy(message.extra, extra->valuestring, sizeof(message.extra)-1);
+                message.extra[sizeof(message.extra) - 1] = '\0'; 
+            }
         }
 
     } else if (strcmp(type->valuestring, "IDENTIFY") == 0) {
         message.type = IDENTIFY;
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username))  {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0'; 
+        }
 
     } else if (strcmp(type->valuestring, "NEW_USER") == 0) {
         message.type = NEW_USER;
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0'; 
+        }
+            
 
     } else if (strcmp(type->valuestring, "STATUS") == 0) {
         message.type = STATUS;
@@ -296,8 +303,10 @@ Message getMessage(char* jsonString) {
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *status = cJSON_GetObjectItemCaseSensitive(json, "status");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
         
          if (cJSON_IsString(status)) 
             message.status = getUserStatus(status->valuestring);
@@ -335,50 +344,68 @@ Message getMessage(char* jsonString) {
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) { 
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
         
-        if (cJSON_IsString(text)) 
+        if (cJSON_IsString(text)) {
             strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+             message.text[sizeof(message.text) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "TEXT_FROM") == 0) {
         message.type = TEXT_FROM;
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
         
-        if (cJSON_IsString(text)) 
+        if (cJSON_IsString(text)) {
             strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+            message.text[sizeof(message.text) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "PUBLIC_TEXT") == 0) {
         message.type = PUBLIC_TEXT;
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0'; 
+        }
         
-        if (cJSON_IsString(text)) 
+        if (cJSON_IsString(text)) {
             strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+            message.text[sizeof(message.text) - 1] = '\0'; 
+        }
 
     } else if (strcmp(type->valuestring, "PUBLIC_TEXT_FROM") == 0) {
         message.type = PUBLIC_TEXT_FROM;
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0'; 
+        }
         
-        if (cJSON_IsString(text)) 
+        if (cJSON_IsString(text)) {
             strncpy(message.text, text->valuestring, sizeof(message.text)-1);
+            message.text[sizeof(message.text) - 1] = '\0'; 
+        }
 
     } else if (strcmp(type->valuestring, "NEW_ROOM") == 0) {
         message.type = NEW_ROOM;
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "INVITE") == 0) {
         message.type = INVITE;
@@ -387,7 +414,7 @@ Message getMessage(char* jsonString) {
 
         if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
-            message.roomname[sizeof(message,roomname) - 1] = '\0'; 
+            message.roomname[sizeof(message.roomname) - 1] = '\0'; 
         }
 
         if (cJSON_IsArray(usernames)) {
@@ -409,34 +436,46 @@ Message getMessage(char* jsonString) {
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username) - 1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
         
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "JOIN_ROOM") == 0) {
         message.type = JOIN_ROOM;
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "JOINED_ROOM") == 0) {
         message.type = JOINED_ROOM;
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
 
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
         
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "ROOM_USERS") == 0) {
         message.type = ROOM_USERS;
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "ROOM_USER_LIST") == 0) {
         message.type = ROOM_USER_LIST;
@@ -444,9 +483,11 @@ Message getMessage(char* jsonString) {
 
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
 
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
-        
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
+
         cJSON *users = cJSON_GetObjectItemCaseSensitive(json, "users");
         if (!cJSON_IsObject(users)) {
             fprintf(stderr, "Error: 'users' is not an object\n");
@@ -471,11 +512,15 @@ Message getMessage(char* jsonString) {
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
 
-        if (cJSON_IsString(roomname)) 
+        if (cJSON_IsString(roomname)) {
             strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
-        
-        if (cJSON_IsString(text)) 
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
+
+        if (cJSON_IsString(text)) {
             strncpy(message.text, text->valuestring, sizeof(message.text) - 1);
+            message.text[sizeof(message.text) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "ROOM_TEXT_FROM") == 0) {
         message.type = ROOM_TEXT_FROM;
@@ -483,37 +528,51 @@ Message getMessage(char* jsonString) {
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
         const cJSON *text = cJSON_GetObjectItemCaseSensitive(json, "text");
 
-        if (cJSON_IsString(roomname)) 
-            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
-        
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(roomname)) {
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
+
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
+
+        if (cJSON_IsString(text)) {
+            strncpy(message.text, text->valuestring, sizeof(message.text) - 1);
+            message.text[sizeof(message.text) - 1] = '\0';
+        }
         
-        if (cJSON_IsString(text)) 
-            strncpy(message.text, text->valuestring, sizeof(message.text)-1);
 
     } else if (strcmp(type->valuestring, "LEAVE_ROOM") == 0) {
         message.type = LEAVE_ROOM;
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
 
-         if (cJSON_IsString(roomname)) 
-            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
-        
-        if (cJSON_IsString(username)) 
-            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+        if (cJSON_IsString(roomname)) {
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
 
+        if (cJSON_IsString(username)) {
+            strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "LEFT_ROOM") == 0) {
         message.type = LEFT_ROOM;
         const cJSON *roomname = cJSON_GetObjectItemCaseSensitive(json, "roomname");
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
 
-        if (cJSON_IsString(roomname)) 
-            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname)-1);
-        
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(roomname)) {
+            strncpy(message.roomname, roomname->valuestring, sizeof(message.roomname) - 1);
+            message.roomname[sizeof(message.roomname) - 1] = '\0';
+        }
+
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
 
     } else if (strcmp(type->valuestring, "DISCONNECT") == 0) {
         message.type = DISCONNECT;
@@ -522,8 +581,10 @@ Message getMessage(char* jsonString) {
         message.type = DISCONNECTED;
         const cJSON *username = cJSON_GetObjectItemCaseSensitive(json, "username");
 
-        if (cJSON_IsString(username)) 
+        if (cJSON_IsString(username)) {
             strncpy(message.username, username->valuestring, sizeof(message.username)-1);
+            message.username[sizeof(message.username) - 1] = '\0';
+        }
 
     } else {
         message.type = INVALID;
@@ -542,7 +603,7 @@ Message parseInput(const char *input) {
         return msg;
     }
 
-    gchar **parts = g_strsplit_set(input, " \t", -1);
+    gchar **parts = g_strsplit_set(input, "|", -1);
     if (parts == NULL) {
         msg.type = INVALID;
         return msg;
@@ -627,14 +688,12 @@ Message parseInput(const char *input) {
         }
     }
 
+    //hey TEN CUIDADO CON SALAS DE NOMBRES CON ESPACIOS
     else if (g_strcmp0(parts[0], "\\messageRoom") == 0) {
         msg.type = ROOM_TEXT;
-        
         if (parts[1] != NULL) {
-            // El nombre de usuario es la segunda parte
             g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
 
-            // El mensaje es todo lo que sigue después del nombre de usuario
             gchar *message = g_strjoinv(" ", &parts[2]);
             if (message != NULL) {
                 g_strlcpy(msg.text, message, sizeof(msg.text));
@@ -649,20 +708,25 @@ Message parseInput(const char *input) {
 
     else if (g_strcmp0(parts[0], "\\getRoomUsers") == 0) {
         msg.type = ROOM_USERS;
-         if (parts[1] != NULL) g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
-         else msg.type = INVALID;
+        gchar *message = g_strjoinv(" ", &parts[1]);
+        if (message != NULL) {
+            g_strlcpy(msg.roomname, message, sizeof(msg.roomname));
+            g_free(message);
+        }
+        else msg.type = INVALID;
     } 
 
     else if (g_strcmp0(parts[0], "\\leaveRoom") == 0) {
         msg.type = LEAVE_ROOM;
-        if (parts[1] != NULL) {
-            g_strlcpy(msg.roomname, parts[1], sizeof(msg.roomname));
+        gchar *message = g_strjoinv(" ", &parts[1]);
+        if (message != NULL) {
+            g_strlcpy(msg.roomname, message, sizeof(msg.roomname));
+            g_free(message);
         } else {
             msg.type = INVALID;
         }
     } 
 
-    
     else if (g_strcmp0(parts[0], "\\bye") == 0) {
         msg.type = DISCONNECT;
     }
@@ -672,6 +736,17 @@ Message parseInput(const char *input) {
         gchar *message = g_strjoinv(" ", &parts[1]);
         if (message != NULL) {
             g_strlcpy(msg.username, message, sizeof(msg.username));
+            g_free(message);
+        } else {
+            msg.type = INVALID;
+        }
+    }
+
+    else if (g_strcmp0(parts[0], "\\acceptInvitation") == 0) {
+        msg.type = IDENTIFY;
+        gchar *message = g_strjoinv(" ", &parts[1]);
+        if (message != NULL) {
+            g_strlcpy(msg.roomname, message, sizeof(msg.roomname));
             g_free(message);
         } else {
             msg.type = INVALID;

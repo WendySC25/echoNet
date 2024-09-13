@@ -246,13 +246,6 @@ void *receiveMessages(void *arg) {
         if (fgets(buffer, sizeof(buffer), connection->in) != NULL) {
             printf("Received message: %s\n", buffer);
 
-
-            // //ALGO ESTA MAL EN .getMessage
-            // size_t len = strlen(buffer);
-            // if (len > 0 && buffer[len - 1] == '\n') {
-            //     buffer[len - 1] = '\0';
-            // }
-
             Message message = getMessage(buffer);
 
             if(message.type != IDENTIFY && (strcmp(connection->user->username, "newuser") == 0)){
@@ -311,17 +304,15 @@ void *receiveMessages(void *arg) {
                 leaveRoom(server, &message, connection);
                 break;
 
-            case INVALID:
-                printf("%s", "WTF IS GOING HWRRE");
-                break;
+            // case INVALID:
+            //     printf("%s", "WTF IS GOING HWRRE");
+            //     break;
 
             default:
                 printf("%s", "AHHHHHHHHH HELP ME");
                 break;
             }
 
-    
-            // sendToGlobalChat(buffer, connection->acceptedSocketFD, server);
         } else {
             break; 
         }
@@ -348,5 +339,4 @@ void sendToGlobalChat(char *buffer, int socketFD, struct Server *server) {
 void sendTo(char *buffer, struct Connection* connection) {
     fprintf(connection->out, "%s\n", buffer);
     fflush(connection->out);  
-        
 }
