@@ -516,8 +516,15 @@ void disconnectUser(struct Server* server, Message* message, struct Connection* 
         GHashTable* room_members = (GHashTable*)value;
 
         if (g_hash_table_contains(room_members, connection->user->username)) {
+
+            gboolean isInvited = FALSE;
+            const char *user_status = (const char *)g_hash_table_lookup(room_members, connection->user->username);
+            if(strcmp(user_status, "INVITED") == 0) isInvited = TRUE;
+
             g_hash_table_remove(room_members, connection->user->username);
 
+            if(isInvited) continue;
+            
             Message leaveNotification = {
                 .type = LEFT_ROOM,
             };

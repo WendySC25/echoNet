@@ -8,6 +8,9 @@
 #include <glib.h>
 #include "server.h" 
 #include "message.h"
+#include <signal.h>
+
+volatile sig_atomic_t signal_received = 0;  
 
 void sentMessageToServer(struct Connection* connection);
 void createReceiveMessageThreadClient(struct Connection* connection);
@@ -24,6 +27,7 @@ void handleJoinedRoom(const char *username, const char *roomname);
 void handleRoomText(const char *username, const char *roomname, const char *text);
 void handleRoomUserList(GHashTable *connections, const char *roomname);
 void handleLeftRoom(const char *username, const char *roomname );
+void handle_sigint(int sig);
 
 
 struct Connection* connetNewClient(char *ip, int port){
@@ -57,8 +61,20 @@ void sentMessageToServer(struct Connection* connection) {
     char buffer[1024];
 
     while (true) {
+        if (signal_received) {
+            // Enviar un mensaje de desconexión al servidor
+            Message msg;
+            msg.type = DISCONNECT;
+            sprintf(buffer, "%s\n", toJSON(&msg));
+            fprintf(connection->out, "%s\n", buffer);
+            fflush(connection->out);
+            close(connection->acceptedSocketFD); 
+            printf("\nSeñal SIGINT recibida. Cerrando conexión...\n");
+            exit(EXIT_SUCCESS);
+        }
+
         ssize_t charCount = getline(&line, &lineSize, stdin);
-        if (charCount > 0) {
+        if (charCount > 0) {x   `
 
             line[charCount - 1] = '\0'; 
 
@@ -150,13 +166,6 @@ void handleUserList(GHashTable *connections) {
 
 void handleInvitation(const char *username, const char *roomname, struct Connection* connection){
     printf("%s invite you to a room %s\n", username, roomname );
-    // Message msg = { .type = JOIN_ROOM };
-
-    // strncpy(msg.roomname, roomname, sizeof(msg.roomname) - 1);
-    // msg.roomname[sizeof(msg.roomname) - 1] = '\0';
-
-    // fprintf(connection->out, "%s\n", toJSON(&msg));
-    // fflush(connection->out);
 
 }
 
@@ -266,7 +275,13 @@ void *receiveMessageFromServer(void *arg) {
 }
 
 
+void handle_sigint(int sig) {
+    printf("\nSeñal SIGINT recibida. Cerrando conexión...\n");
+    signal_received = 1; 
+}
+
 int main(int argc, char* argv[]) {
+    signal(SIGINT, handle_sigint);
 
     if (argc != 3) {
         fprintf(stderr, "Usage: %s <IP> <Port>\n", argv[0]);
