@@ -9,9 +9,13 @@ This project involves developing a chat server implemented in the C programming 
 ## Building the Project
 
 **`sudo apt-get install meson ninja-build`**
+
 **`meson setup builddir`**
+
 **`meson compile -C builddir`**
+
 **`./builddir/servidorR <port>`**
+
 **`./builddir/clienteR <ip> <port>`**
 
 ## Using Commands in the Chat
