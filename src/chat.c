@@ -8,6 +8,11 @@
 
 int main(int argc, char* argv[]){
 
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <Port>\n", argv[0]);
+        return EXIT_FAILURE;
+    }
+
     struct Server* server = newServer(atoi(argv[1]));
     if (server == NULL) {
         fprintf(stderr, "Failed to start server.\n");
