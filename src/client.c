@@ -37,6 +37,26 @@ struct Connection* connectNewClient(char *ip, int port){
 
 }
 
+void disconnect(struct Connection* connection) {
+    if (connection != NULL) {
+        // Send a disconnect message to the server
+        Message msg;
+        msg.type = DISCONNECT;
+        char buffer[1024];
+        snprintf(buffer, sizeof(buffer), "%s\n", toJSON(&msg));
+        fprintf(connection->out, "%s\n", buffer);
+        fflush(connection->out);
+
+        freeConnection(connection);
+
+        printf("Disconnected successfully.\n");
+        printByeHeader();
+            
+        exit(EXIT_SUCCESS);
+    }
+}
+
+
 void sentMessageToServer(struct Connection* connection) {
     char *line = NULL;
     size_t lineSize = 0;
@@ -46,15 +66,7 @@ void sentMessageToServer(struct Connection* connection) {
     while (true) {
 
         if (signal_received) {
-            // Enviar un mensaje de desconexión al servidor
-            Message msg;
-            msg.type = DISCONNECT;
-            sprintf(buffer, "%s\n", toJSON(&msg));
-            fprintf(connection->out, "%s\n", buffer);
-            fflush(connection->out);
-            close(connection->acceptedSocketFD); 
-            printf("\nSeñal SIGINT recibida. Cerrando conexión...\n");
-            exit(EXIT_SUCCESS);
+            disconnect(connection);
         }
 
         ssize_t charCount = getline(&line, &lineSize, stdin);
@@ -66,8 +78,7 @@ void sentMessageToServer(struct Connection* connection) {
             fflush(connection->out);
 
             if (strcmp(line, "\\bye") == 0) { 
-                //ESTO ESTÁ MAL, SOLO ES UN CAMBIO
-                exit(EXIT_FAILURE);
+                disconnect(connection);
             }
 
         }
@@ -148,9 +159,12 @@ void handleReceiveMessage(char* buffer, struct Connection* conection) {
             break;
             
         default:
-            // handleUnknownMessage();
+            // Invalid Message is ignore
             break;
     }
+
+    if(message.type == RESPONSE && message.operation == INVALID)
+        disconnect(conection);
 }
 
 void *receiveMessageFromServer(void *arg) {

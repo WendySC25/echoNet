@@ -149,7 +149,7 @@ void freeConnection(gpointer data) {
         fclose(connection->in);
         fclose(connection->out);
         close(connection->acceptedSocketFD);
-        freeUser(connection->user);
+        if(connection->user != NULL) freeUser(connection->user);
         // printf(" ESTO ESTA EN FREECONECTION ANTES DEL ERROR %p", connection);
         //free(connection); //provoca Segmentatio fault
     }

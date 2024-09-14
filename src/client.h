@@ -32,6 +32,17 @@ void *receiveMessageFromServer(void *arg);
 struct Connection* connectNewClient(char *ip, int port);
 
 /**
+ * @brief Disconnects from the server and frees associated resources.
+ * 
+ * This function sends a disconnect message to the server, closes any open sockets, 
+ * and frees the memory associated with the `Connection` structure. It also exits 
+ * the program gracefully.
+ * 
+ * @param connection Pointer to the `Connection` structure to be disconnected.
+ */
+void disconnect(struct Connection* connection); 
+
+/**
  * @brief Handles incoming messages from the server.
  * @param buffer Buffer containing the received message.
  * @param connection Pointer to the connection structure.
