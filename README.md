@@ -1,6 +1,19 @@
 # echoNet
 This project involves developing a chat server implemented in the C programming language. The server is designed to handle multiple client connections simultaneously, utilizing threads to ensure smooth and efficient communication.
 
+## Dependencies
+
+- **glib**: A utility library for C programming that provides data structures, macros, and other utilities.
+- **cJSON**: A lightweight JSON parser in C.
+
+## Building the Project
+
+sudo apt-get install meson ninja-build
+meson setup builddir
+meson compile -C builddir
+./builddir/servidorR <port>
+./builddir/clienteR <ip> <port>
+
 ## Using Commands in the Chat
 
 The chat system supports a variety of commands for interacting with the server. Below are the commands you can use and how they are parsed by the system.
