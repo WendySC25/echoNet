@@ -12,7 +12,7 @@ int main(int argc, char* argv[]) {
 
     signal(SIGINT, handle_sigint);
 
-    struct Connection* connection = connetNewClient(argv[1], atoi(argv[2]));
+    struct Connection* connection = connectNewClient(argv[1], atoi(argv[2]));
     createReceiveMessageThreadClient(connection);
     sentMessageToServer(connection);
 

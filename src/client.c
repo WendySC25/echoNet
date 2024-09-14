@@ -15,7 +15,7 @@
 volatile sig_atomic_t signal_received = 0;  
 
 
-struct Connection* connetNewClient(char *ip, int port){
+struct Connection* connectNewClient(char *ip, int port){
 
     int socketFD = socket(AF_INET, SOCK_STREAM, 0);
     if (socketFD < 0) {
@@ -92,7 +92,8 @@ void createReceiveMessageThreadClient(struct Connection* connection) {
     pthread_detach(id);
 }
 
-void handleReciveMessage(char* buffer, struct Connection* conection) {
+     
+void handleReceiveMessage(char* buffer, struct Connection* conection) {
 
     printf("MENSAJE DEL SERVIDOR: %s \n", buffer);
     Message message = getMessage(buffer);
@@ -158,7 +159,7 @@ void *receiveMessageFromServer(void *arg) {
     while (true) {
         char *result = fgets(buffer, sizeof(buffer) - 1, connection->in);
         if (result != NULL) 
-            handleReciveMessage(buffer, connection);
+            handleReceiveMessage(buffer, connection);
         else 
             break;
     }   

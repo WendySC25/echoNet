@@ -47,20 +47,76 @@ void handleNewStatus(const char *username, const char *status) {
 }
 
 void handleServerResponse(Message msg, struct Connection* connection) {
-    if (msg.operation == OP_IDENTIFY && msg.result == RE_SUCCESS) {
-        connection->user = newUser(msg.extra);
-        char message[1024];
-        snprintf(message, sizeof(message), BOLD "Success! Username registered: %s" RESET, connection->user->username);
-        printCentered(message);
+
+    char message[1024];
+
+    switch (msg.operation) {
+
+    case OP_IDENTIFY:
+        if(msg.result == RE_SUCCESS) {
+            connection->user = newUser(msg.extra);   
+            snprintf(message, sizeof(message), GREEN BOLD "Success! Username registered: %s" RESET, connection->user->username);
+
+        } else if (msg.result == RE_USER_ALREADY_EXISTS) {
+            snprintf(message, sizeof(message), RED BOLD "Sorry! Another username is already registered with name %s. Try another." RESET, msg.extra);
+        }
+        break;
+    
+    case OP_TEXT:
+        snprintf(message, sizeof(message), RED BOLD "No such user: %s" RESET, msg.extra);
+        break;
+    
+    case OP_NEW_ROOM:
+        if(msg.result == RE_SUCCESS) 
+            snprintf(message, sizeof(message), GREEN BOLD "Success! You have a new room: %s." RESET, msg.extra);
+        else if (msg.result == RE_ROOM_ALREADY_EXISTS)
+            snprintf(message, sizeof(message), RED BOLD "Sorry! Another username already registered a room: %s. Try another." RESET, msg.extra);
+        break;
+    
+    case OP_INVITE:
+        if(msg.result ==  RE_NO_SUCH_ROOM) 
+            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+        else if(msg.result == RE_NO_SUCH_USER)  
+            snprintf(message, sizeof(message), RED BOLD "Ups! There is no user: %s" RESET, msg.extra);
+        break;
+
+    case OP_JOIN_ROOM:
+        if(msg.result ==  RE_NO_SUCH_ROOM) 
+            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+        else if(msg.result == RE_NOT_INVITED) 
+            snprintf(message, sizeof(message), RED BOLD "Sorry! You were not invited to room: %s" RESET, msg.extra);
+        else if (msg.result == RE_SUCCESS) 
+            snprintf(message, sizeof(message), GREEN BOLD "Great! Welcome to room: %s" RESET, msg.extra);
+        break;
+    
+    case OP_ROOM_USERS:
+        if(msg.result ==  RE_NO_SUCH_ROOM) 
+            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+        else if(msg.result == RE_NOT_JOINED) 
+            snprintf(message, sizeof(message), RED BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
+        break;
+    
+    case OP_ROOM_TEXT:
+        if(msg.result ==  RE_NO_SUCH_ROOM) 
+            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+        else if(msg.result == RE_NOT_JOINED) 
+            snprintf(message, sizeof(message), RED BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
+        break;
+
+    case OP_LEAVE_ROOM:
+        if(msg.result ==  RE_NO_SUCH_ROOM) 
+            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+        else if(msg.result == RE_NOT_JOINED) 
+            snprintf(message, sizeof(message), RED BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
+        break;
+
+    default:
+
+        break;
     }
 
-    if (msg.operation == OP_INVALID) {
-        exit(EXIT_SUCCESS);
-    }
+    printCentered(message);
 
-    char response[1024];
-    snprintf(response, sizeof(response), "%s", toJSON(&msg));
-    printCentered(response);
 }
 
 void handlePrivateMessage(const char *username, const char *text) {
@@ -71,7 +127,7 @@ void handlePrivateMessage(const char *username, const char *text) {
 
 void handlePublicMessage(const char *username, const char *text) {
     char message[1024];
-    snprintf(message, sizeof(message), BOLD " %s sent to global chat: %s" RESET, username, text);
+    snprintf(message, sizeof(message), BOLD " %s (global): %s" RESET, username, text);
     printCentered(message);
 }
 
@@ -112,7 +168,7 @@ void handleJoinedRoom(const char *username, const char *roomname) {
 
 void handleRoomText(const char *username, const char *roomname, const char *text) {
     char message[1024];
-    snprintf(message, sizeof(message), BOLD "%s sent to room %s: %s" RESET, username, roomname, text);
+    snprintf(message, sizeof(message), BOLD "%s (room %s): %s" RESET, username, roomname, text);
     printCentered(message);
 }
 
