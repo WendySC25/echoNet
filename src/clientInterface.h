@@ -12,6 +12,9 @@
 #define GREEN "\x1b[32m"     
 #define RED "\x1b[31m" 
 
+#define BLUE    "\x1B[34m"
+#define CYAN    "\x1B[36m"
+
 
 void printCentered(const char *text);
 void handleNewUser(const char *username);
@@ -26,5 +29,6 @@ void handleRoomText(const char *username, const char *roomname, const char *text
 void handleRoomUserList(GHashTable *connections, const char *roomname);
 void handleLeftRoom(const char *username, const char *roomname );
 void handleDisconnection(const char *username);
+void printWelcomeHeader();
 
 #endif

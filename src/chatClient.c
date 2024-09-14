@@ -1,5 +1,6 @@
 
 #include "client.h"
+#include "clientInterface.h"
 #include <signal.h>
 #include <stdlib.h>
 
@@ -12,6 +13,7 @@ int main(int argc, char* argv[]) {
 
     signal(SIGINT, handle_sigint);
 
+    printWelcomeHeader();
     struct Connection* connection = connectNewClient(argv[1], atoi(argv[2]));
     createReceiveMessageThreadClient(connection);
     sentMessageToServer(connection);

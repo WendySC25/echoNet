@@ -196,3 +196,28 @@ void handleLeftRoom(const char *username, const char *roomname) {
     snprintf(message, sizeof(message), BOLD RED " %s has left the room %s :(" RESET, username, roomname);
     printCentered(message);
 }
+
+void printWelcomeHeader() {
+  
+    printf(BOLD CYAN "\n");
+    printf("                                              ▗▄▄▄▖ ▗▄▄▖▗▖ ▗▖ ▗▄▖ ▗▖  ▗▖▗▖  ▗▖▗▄▄▄▖▗▄▄▄▖\n");
+    printf("                                              ▐▌   ▐▌   ▐▌ ▐▌▐▌ ▐▌▐▛▚▖▐▌▐▛▚▖▐▌▐▌     █  \n");
+    printf("                                              ▐▛▀▀▘▐▌   ▐▛▀▜▌▐▌ ▐▌▐▌ ▝▜▌▐▌ ▝▜▌▐▛▀▀▘  █  \n");
+    printf("                                              ▐▙▄▄▖▝▚▄▄▖▐▌ ▐▌▝▚▄▞▘▐▌  ▐▌▐▌  ▐▌▐▙▄▄▖  █  \n");
+    printf(RESET "\n");
+    printf("                                                       "BOLD GREEN "WELCOME TO ECHONET" RESET "\n\n");
+    printf(BOLD CYAN "\n");
+    printf("                                                    _----------_,\n");
+    printf("                                                  ,'__         _-:,\n");
+    printf("                                                 /    \"\"--_--\"\"...:\\\n");
+    printf("                                                /         |.........\\\n");
+    printf("                                               /          |..........\\\n");
+    printf("                                              /,         _'_........./:\n");
+    printf("                                              ! -,    _-\"   \"-_,,, ,;;:\n");
+    printf("                                              \\   -_\"         \"-_/;;;;\n");
+    printf("                                               \\   \\             /;;;;'\n");
+    printf("                                                \\   \\           /;;;;;\n");
+    printf("                                                 '.  \\         /;;;;'\n");
+    printf("                                                   \"-_\\_______/;;'\n");
+    printf(RESET "\n");
+}
