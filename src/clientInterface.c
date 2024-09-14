@@ -58,60 +58,60 @@ void handleServerResponse(Message msg, struct Connection* connection) {
             snprintf(message, sizeof(message), GREEN BOLD "Success! Username registered: %s" RESET, connection->user->username);
 
         } else if (msg.result == RE_USER_ALREADY_EXISTS) {
-            snprintf(message, sizeof(message), RED BOLD "Sorry! Another username is already registered with name %s. Try another." RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Sorry! Another username is already registered with name %s. Try another." RESET, msg.extra);
         }
         break;
     
     case OP_TEXT:
-        snprintf(message, sizeof(message), RED BOLD "No such user: %s" RESET, msg.extra);
+        snprintf(message, sizeof(message), YELLOW BOLD "No such user: %s" RESET, msg.extra);
         break;
     
     case OP_NEW_ROOM:
         if(msg.result == RE_SUCCESS) 
             snprintf(message, sizeof(message), GREEN BOLD "Success! You have a new room: %s." RESET, msg.extra);
         else if (msg.result == RE_ROOM_ALREADY_EXISTS)
-            snprintf(message, sizeof(message), RED BOLD "Sorry! Another username already registered a room: %s. Try another." RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Sorry! Another username already registered a room: %s. Try another." RESET, msg.extra);
         break;
     
     case OP_INVITE:
         if(msg.result ==  RE_NO_SUCH_ROOM) 
-            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Ups! There is no room: %s" RESET, msg.extra);
         else if(msg.result == RE_NO_SUCH_USER)  
-            snprintf(message, sizeof(message), RED BOLD "Ups! There is no user: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Ups! There is no user: %s" RESET, msg.extra);
         break;
 
     case OP_JOIN_ROOM:
         if(msg.result ==  RE_NO_SUCH_ROOM) 
-            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Ups! There is no room: %s" RESET, msg.extra);
         else if(msg.result == RE_NOT_INVITED) 
-            snprintf(message, sizeof(message), RED BOLD "Sorry! You were not invited to room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Sorry! You were not invited to room: %s" RESET, msg.extra);
         else if (msg.result == RE_SUCCESS) 
             snprintf(message, sizeof(message), GREEN BOLD "Great! Welcome to room: %s" RESET, msg.extra);
         break;
     
     case OP_ROOM_USERS:
         if(msg.result ==  RE_NO_SUCH_ROOM) 
-            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Ups! There is no room: %s" RESET, msg.extra);
         else if(msg.result == RE_NOT_JOINED) 
-            snprintf(message, sizeof(message), RED BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
         break;
     
     case OP_ROOM_TEXT:
         if(msg.result ==  RE_NO_SUCH_ROOM) 
-            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Ups! There is no room: %s" RESET, msg.extra);
         else if(msg.result == RE_NOT_JOINED) 
-            snprintf(message, sizeof(message), RED BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
         break;
 
     case OP_LEAVE_ROOM:
         if(msg.result ==  RE_NO_SUCH_ROOM) 
-            snprintf(message, sizeof(message), RED BOLD "Ups! There is no room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Ups! There is no room: %s" RESET, msg.extra);
         else if(msg.result == RE_NOT_JOINED) 
-            snprintf(message, sizeof(message), RED BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
+            snprintf(message, sizeof(message), YELLOW BOLD "Sorry! You have not joined the room: %s" RESET, msg.extra);
         break;
 
     default:
-
+        snprintf(message, sizeof(message), YELLOW BOLD "You have received an invalid message from the server. You must now die. We are sorry,  %s." RESET, connection->user->username);
         break;
     }
 
@@ -133,7 +133,7 @@ void handlePublicMessage(const char *username, const char *text) {
 
 void handleDisconnection(const char *username) {
     char message[1024];
-    snprintf(message, sizeof(message), BOLD RED " %s has left the chat :(" RESET, username);
+    snprintf(message, sizeof(message), BOLD YELLOW " %s has left the chat :(" RESET, username);
     printCentered(message);
 }
 
@@ -193,11 +193,11 @@ void handleRoomUserList(GHashTable *connections, const char *roomname) {
 
 void handleLeftRoom(const char *username, const char *roomname) {
     char message[1024];
-    snprintf(message, sizeof(message), BOLD RED " %s has left the room %s :(" RESET, username, roomname);
+    snprintf(message, sizeof(message), BOLD YELLOW " %s has left the room %s :(" RESET, username, roomname);
     printCentered(message);
 }
 
-void printWelcomeHeader() {
+void printWelcomeHeader(void) {
   
     printf(BOLD CYAN "\n");
     printf("                                              ▗▄▄▄▖ ▗▄▄▖▗▖ ▗▖ ▗▄▖ ▗▖  ▗▖▗▖  ▗▖▗▄▄▄▖▗▄▄▄▖\n");
@@ -220,4 +220,20 @@ void printWelcomeHeader() {
     printf("                                                 '.  \\         /;;;;'\n");
     printf("                                                   \"-_\\_______/;;'\n");
     printf(RESET "\n");
+}
+
+
+void printByeHeader(void){
+
+    printf(BOLD CYAN "\n");
+    printf("                                                  ██████╗ ██╗   ██╗███████╗\n");
+    printf("                                                  ██╔══██╗╚██╗ ██╔╝██╔════╝\n");
+    printf("                                                  ██████╔╝ ╚████╔╝ █████╗  \n");
+    printf("                                                  ██╔══██╗  ╚██╔╝  ██╔══╝  \n");
+    printf("                                                  ██████╔╝   ██║   ███████╗\n");
+    printf("                                                  ╚═════╝    ╚═╝   ╚══════╝\n");
+    printf(RESET "\n");
+    
+    printf(BOLD GREEN "                                                       COME BACK SOON TO ECHONET" RESET "\n\n");
+
 }
