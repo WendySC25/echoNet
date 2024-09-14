@@ -5,11 +5,8 @@
 #include <string.h>
 #include "user.h"
 
-void imprimeCONTROL(char* message){
-    printf("Este mensaje será enviado: %s\n", message);
-}
 
-void handlesUnidentifiedUser(struct Server* server, Message* message,  struct Connection* connection){
+void handlesUnidentifiedUser(struct Connection* connection){
      Message serverResponse = {
         .type = RESPONSE,
         .operation = OP_INVALID,
@@ -19,7 +16,6 @@ void handlesUnidentifiedUser(struct Server* server, Message* message,  struct Co
     sendTo(toJSON(&serverResponse), connection);
     freeConnection(connection);
 }
-
 
 void identifyUser(struct Server* server, Message* message, struct Connection* connection) {
 
@@ -53,7 +49,7 @@ void identifyUser(struct Server* server, Message* message, struct Connection* co
     User* user = newUser(message->username);
     connection->user = user;
 
-    add_connection(server, message->username, connection);
+    addConnectionn(server, message->username, connection);
     sendTo(toJSON(&serverResponse), connection);
     sendToGlobalChat(toJSON(&notifyNewUser), connection->acceptedSocketFD, server);
     
@@ -68,10 +64,6 @@ void changeStatus(struct Server* server, Message* message, struct Connection* co
         return;
     }
 
-    // Actualizar el estado del usuario
-    // strncpy(conn->user->status, message->status, sizeof(conn->user->status) - 1);
-    // conn->user->status[sizeof(conn->user->status) - 1] = '\0';
-
     conn->user->status = message->status;
 
     Message newStatusMessage = {
@@ -82,15 +74,11 @@ void changeStatus(struct Server* server, Message* message, struct Connection* co
     newStatusMessage.username[sizeof(newStatusMessage.username) - 1] = '\0';
 
     newStatusMessage.status = message->status;
-
-    // strncpy(newStatusMessage.status, message->status, sizeof(newStatusMessage.status) - 1);
-    // newStatusMessage.status[sizeof(newStatusMessage.status) - 1] = '\0';
-
     sendToGlobalChat(toJSON(&newStatusMessage), connection->acceptedSocketFD, server);
     
 }
 
-void listUsers(struct Server* server, Message* message, struct Connection* connection) {
+void listUsers(struct Server* server, struct Connection* connection) {
 
     Message serverResponse = {
         .type = USER_LIST,
@@ -257,8 +245,11 @@ void inviteToRoom(struct Server* server, Message* message, struct Connection* co
         strncpy(invite.username, connection->user->username, sizeof(invite.username) - 1);
         invite.username[sizeof(invite.username) - 1] = '\0';
         sendTo(toJSON(&invite), invited_connection);
+
+        g_free(invited_user);
     }
 
+    g_array_free(message->usernamesInvitation, TRUE);
 
     g_mutex_unlock(&(server->room_mutex));
 }
@@ -308,7 +299,7 @@ void joinRoom(struct Server* server, Message* message, struct Connection* connec
 
     strncpy(joinNotification.username, connection->user->username, sizeof(joinNotification.username) - 1);
     joinNotification.username[sizeof(joinNotification.username) - 1] = '\0';
-    sendRoomMessageToAll(room_members, &joinNotification, server, connection);
+    sendRoomMessageToAll(room_members, toJSON(&joinNotification), server, connection);
 
     Message response = {
         .type = RESPONSE,
@@ -320,25 +311,6 @@ void joinRoom(struct Server* server, Message* message, struct Connection* connec
     sendTo(toJSON(&response), connection);
 
     g_mutex_unlock(&(server->room_mutex));
-}
-
-void sendRoomMessageToAll(GHashTable* room_members, Message* message, struct Server* server, struct Connection* connection) {
-    GHashTableIter iter;
-    gpointer key, value;
-    g_hash_table_iter_init(&iter, room_members);
-
-    while (g_hash_table_iter_next(&iter, &key, &value)) {
-        const char* username = (const char*)key;
-        const char* status = (const char*)value;
-
-        struct Connection* conn = (struct Connection*)g_hash_table_lookup(server->connections, username);
-        if (conn->acceptedSocketFD == connection->acceptedSocketFD) continue;
-        if (strcmp(status, "INVITED") != 0) 
-            if (conn) 
-                sendTo(toJSON(message), conn);
-            
-    
-    }
 }
 
 void listRoomUsers(struct Server* server, Message* message, struct Connection* connection) {
@@ -360,23 +332,25 @@ void listRoomUsers(struct Server* server, Message* message, struct Connection* c
         return;
     }
 
-    // Verificar si el usuario ha sido invitado
-    // const char* user_status = g_hash_table_lookup(room_members, connection->user->username);
-    // if (user_status == NULL || strcmp(user_status, "INVITED") != 0) {
-    //     Message response = {
-    //         .type = RESPONSE,
-    //         .operation = OP_ROOM_USERS,
-    //         .result = RE_NOT_INVITED,
-    //     };
-    //     strncpy(response.extra, message->roomname, sizeof(response.extra) - 1);
-    //     response.extra[sizeof(response.extra) - 1] = '\0';
-    //     sendTo(toJSON(&response), connection);
-    //     g_mutex_unlock(&(server->room_mutex));
-    //     return;
-    // }
-
     // Verificar si el usuario está en la sala
+ 
     if (!g_hash_table_contains(room_members, connection->user->username)) {
+        Message response = {
+            .type = RESPONSE,
+            .operation = OP_ROOM_TEXT,
+            .result = RE_NOT_JOINED,
+        };
+        strncpy(response.extra, message->roomname, sizeof(response.extra) - 1);
+        response.extra[sizeof(response.extra) - 1] = '\0';
+        sendTo(toJSON(&response), connection);
+        g_mutex_unlock(&(server->room_mutex));
+        return;
+    }
+
+    // Verificar si el usuario ha sido invitado
+    const char *status = g_hash_table_lookup(room_members, connection->user->username);
+
+    if (strcmp(status, "INVITED") == 0) {
         Message response = {
             .type = RESPONSE,
             .operation = OP_ROOM_TEXT,
@@ -407,7 +381,6 @@ void listRoomUsers(struct Server* server, Message* message, struct Connection* c
 void sendRoomMessage(struct Server* server, Message* message, struct Connection* connection) {
     g_mutex_lock(&(server->room_mutex));
     
-    // Verificar si la sala existe
     GHashTable* room_members = g_hash_table_lookup(server->chat_rooms, message->roomname);
     if (room_members == NULL) {
         Message response = {
@@ -422,13 +395,16 @@ void sendRoomMessage(struct Server* server, Message* message, struct Connection*
         return;
     }
 
+
     // Verificar si el usuario está en la sala
     if (!g_hash_table_contains(room_members, connection->user->username)) {
+
         Message response = {
             .type = RESPONSE,
             .operation = OP_ROOM_TEXT,
             .result = RE_NOT_JOINED,
         };
+
         strncpy(response.extra, message->roomname, sizeof(response.extra) - 1);
         response.extra[sizeof(response.extra) - 1] = '\0';
         sendTo(toJSON(&response), connection);
@@ -446,10 +422,11 @@ void sendRoomMessage(struct Server* server, Message* message, struct Connection*
     
     strncpy(roomMessage.username, connection->user->username, sizeof(roomMessage.username) - 1);
     roomMessage.username[sizeof(roomMessage.username) - 1] = '\0';
+
     strncpy(roomMessage.text, message->text, sizeof(roomMessage.text) - 1);
     roomMessage.text[sizeof(roomMessage.text) - 1] = '\0';
 
-    sendRoomMessageToAll(room_members, &roomMessage, server, connection);
+    sendRoomMessageToAll(room_members, toJSON(&roomMessage), server, connection);
 
     g_mutex_unlock(&(server->room_mutex));
 }
@@ -499,12 +476,12 @@ void leaveRoom(struct Server* server, Message* message, struct Connection* conne
 
     strncpy(leaveNotification.username, connection->user->username, sizeof(leaveNotification.username) - 1);
     leaveNotification.username[sizeof(leaveNotification.username) - 1] = '\0';
-    sendRoomMessageToAll(room_members, &leaveNotification, server, connection);
+    sendRoomMessageToAll(room_members, toJSON(&leaveNotification), server, connection);
 
     g_mutex_unlock(&(server->room_mutex));
 }
 
-void disconnectUser(struct Server* server, Message* message, struct Connection* connection) {
+void disconnectUser(struct Server* server,struct Connection* connection) {
 
     g_mutex_lock(&(server->room_mutex));
 
@@ -535,7 +512,7 @@ void disconnectUser(struct Server* server, Message* message, struct Connection* 
             strncpy(leaveNotification.username, connection->user->username, sizeof(leaveNotification.username) - 1);
             leaveNotification.username[sizeof(leaveNotification.username) - 1] = '\0';
 
-            sendRoomMessageToAll(room_members, &leaveNotification, server, connection);
+            sendRoomMessageToAll(room_members, toJSON(&leaveNotification), server, connection);
 
             if (g_hash_table_size(room_members) == 0) {
                 g_hash_table_destroy(room_members);
@@ -554,7 +531,7 @@ void disconnectUser(struct Server* server, Message* message, struct Connection* 
 
     g_mutex_unlock(&(server->room_mutex));
 
-    remove_connection(server, connection);
+    removeConnection(server, connection);
 }
 
 

@@ -10,7 +10,7 @@
 #define BOLD  "\x1b[1m"
 #define ITALIC "\x1b[3m"
 #define GREEN "\x1b[32m"     
-#define RED "\x1b[31m"  // Rojo
+#define RED "\x1b[31m" 
 
 
 void printCentered(const char *text);
@@ -20,7 +20,7 @@ void handlePrivateMessage(const char *username, const char *text);
 void handlePublicMessage(const char *username, const char *text);
 void handleNewStatus(const char *username, const char *status);
 void handleUserList(GHashTable *connections);
-void handleInvitation(const char *username, const char *roomname, struct Connection* connection);
+void handleInvitation(const char *username, const char *roomname);
 void handleJoinedRoom(const char *username, const char *roomname);
 void handleRoomText(const char *username, const char *roomname, const char *text);
 void handleRoomUserList(GHashTable *connections, const char *roomname);

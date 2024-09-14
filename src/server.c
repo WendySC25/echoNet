@@ -12,12 +12,8 @@ struct sockaddr_in* createAddress(char *ip, int port) {
     struct sockaddr_in  *address = malloc(sizeof(struct sockaddr_in));
     address->sin_family = AF_INET;
     address->sin_port = htons(port);
-
-    if(strlen(ip) ==0)
-        address->sin_addr.s_addr = INADDR_ANY;
-    else
-        inet_pton(AF_INET,ip,&address->sin_addr.s_addr);
-
+    if(strlen(ip) ==0) address->sin_addr.s_addr = INADDR_ANY;
+    else inet_pton(AF_INET,ip,&address->sin_addr.s_addr);
     return address;
 }
 
@@ -61,11 +57,12 @@ struct Server* newServer(int port) {
     }
 
     server->acceptedConnectionCount = 0;
+
     server->connections = g_hash_table_new_full(
-        g_str_hash,           // Función de hash para cadenas
-        g_str_equal,          // Función de comparación para cadenas
-        g_free,               // Función para liberar las claves (serán cadenas duplicadas)
-        freeConnection  // Función para liberar los valores (estructuras Connection)
+        g_str_hash,         
+        g_str_equal,          
+        g_free,               
+        freeConnection  
     );
 
     server->chat_rooms = g_hash_table_new_full(
@@ -113,7 +110,7 @@ struct Connection* newConnection(int clientSocketFD) {
         connection->error = clientSocketFD;
     }
 
-    connection->in = fdopen(clientSocketFD, "r");
+    connection->in  = fdopen(clientSocketFD, "r");
     connection->out = fdopen(clientSocketFD, "w");
 
     if (connection->in == NULL || connection->out == NULL) {
@@ -158,7 +155,7 @@ void freeConnection(gpointer data) {
     }
 }
 
-void add_connection(struct Server *server, const char *username, struct Connection *conn) {
+void addConnectionn(struct Server *server, const char *username, struct Connection *conn) {
     g_mutex_lock(&(server->room_mutex));
 
     char *username_key = g_strdup(username);
@@ -168,54 +165,14 @@ void add_connection(struct Server *server, const char *username, struct Connecti
     g_mutex_unlock(&(server->room_mutex));
 }
 
-// Connection *get_connection(Server *server, const char *username) {
-//     return g_hash_table_lookup(server->connections, username);
-// }
-
-void remove_connection(struct Server *server, struct Connection *conn) {
-    if (server == NULL) {
-        printf("Error: El puntero server es nulo.\n");
-        return;
-    }
-
-    if (conn == NULL) {
-        printf("Error: El puntero conn es nulo.\n");
-        return;
-    }
-
-    if (conn->user == NULL) {
-        printf("Error: El puntero conn->user es nulo.\n");
-        return;
-    }
-
-    if (conn->user->username == NULL) {
-        printf("Error: El puntero conn->user->username es nulo.\n");
-        return;
-    }
-
-    printf("LLEGAMOS AQUI\n");
-    printf(" ESTO ESTA EN REMOVE %p", conn);
-
+void removeConnection(struct Server *server, struct Connection *conn) {
     g_mutex_lock(&(server->room_mutex));
 
-
     gboolean removed = g_hash_table_remove(server->connections, conn->user->username);
-
-    if (removed) {
-        printf("LLEGAMOS AQUI 2\n");
-        server->acceptedConnectionCount--;
-    } else {
-        // printf("Error: La clave no se encontró en la tabla hash.\n");
-    }
+    if (removed) server->acceptedConnectionCount--;
 
     g_mutex_unlock(&(server->room_mutex));
 }
-// void free_server(Server *server) {
-//     g_hash_table_destroy(server->connections); 
-//     free(server->address);
-//     close(server->serverSocketFD);
-// }
-
 
 void createReceiveMessageThread(struct Connection *pSocket, struct Server* server) {
     pthread_t id;
@@ -249,8 +206,7 @@ void *receiveMessages(void *arg) {
             Message message = getMessage(buffer);
 
             if(message.type != IDENTIFY && (strcmp(connection->user->username, "newuser") == 0)){
-                handlesUnidentifiedUser(server, &message, connection);
-                continue;
+                handlesUnidentifiedUser(connection);
             }
 
             switch (message.type) {
@@ -265,7 +221,7 @@ void *receiveMessages(void *arg) {
                 break;
             
             case USERS:
-                listUsers(server, &message, connection);
+                listUsers(server, connection);
                 break;
             
             case TEXT:
@@ -277,7 +233,7 @@ void *receiveMessages(void *arg) {
                 break;
             
             case DISCONNECT:
-                disconnectUser(server, &message, connection);
+                disconnectUser(server, connection);
                 break;
 
             case NEW_ROOM:
@@ -304,12 +260,8 @@ void *receiveMessages(void *arg) {
                 leaveRoom(server, &message, connection);
                 break;
 
-            // case INVALID:
-            //     printf("%s", "WTF IS GOING HWRRE");
-            //     break;
-
             default:
-                printf("%s", "AHHHHHHHHH HELP ME");
+                printf("%s\n", "MENSAJE NO RECONOCIDO");
                 break;
             }
 
@@ -318,7 +270,7 @@ void *receiveMessages(void *arg) {
         }
     }
 
-    // free(data);
+    free(data);
     return NULL;
 }
 
@@ -339,4 +291,47 @@ void sendToGlobalChat(char *buffer, int socketFD, struct Server *server) {
 void sendTo(char *buffer, struct Connection* connection) {
     fprintf(connection->out, "%s\n", buffer);
     fflush(connection->out);  
+}
+
+void sendRoomMessageToAll(GHashTable* room_members, char *buffer, struct Server* server, struct Connection* connection) {
+    GHashTableIter iter;
+    gpointer key, value;
+    g_hash_table_iter_init(&iter, room_members);
+
+    while (g_hash_table_iter_next(&iter, &key, &value)) {
+
+        const char* username = (const char*)key;
+        const char* status = (const char*)value;
+
+        struct Connection* conn = (struct Connection*)g_hash_table_lookup(server->connections, username);
+        if (conn->acceptedSocketFD == connection->acceptedSocketFD) continue;
+        if (strcmp(status, "INVITED") != 0) 
+            if (conn) sendTo(buffer, conn);
+            
+    
+    }
+}
+
+void freeServer(struct Server* server) {
+    if (server == NULL) {
+        return;
+    }
+
+    if (server->connections != NULL) {
+        g_hash_table_unref(server->connections);
+    }
+
+    if (server->chat_rooms != NULL) {
+        g_hash_table_unref(server->chat_rooms);
+    }
+
+    g_mutex_clear(&(server->room_mutex));
+
+    if (server->address != NULL) {
+        free(server->address);
+    }
+
+    close(server->serverSocketFD);
+
+    free(server);
 }

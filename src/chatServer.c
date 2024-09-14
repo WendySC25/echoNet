@@ -20,5 +20,7 @@ int main(int argc, char* argv[]){
     }
     printf("Server is up and running successfully on port %d :) \n", atoi(argv[1]));
     startServer(server);
+    
+    freeServer(server);
     return 0;
 }

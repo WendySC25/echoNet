@@ -4,42 +4,28 @@
 
 const char* UserStatusToString(UserStatus status) {
     switch (status) {
-        case ONLINE:
-            return "ONLINE";
-        case AWAY:
-            return "AWAY";
-        case BUSY:
-            return "BUSY";
-        default:
-            return "UNKNOWN"; 
+        case ONLINE: return "ONLINE";
+        case AWAY:   return "AWAY";
+        case BUSY:   return "BUSY";
+        default:     return "UNKNOWN"; 
     }
 }
 
 UserStatus getUserStatus(const char* str) {
-    if (strcmp(str, "ONLINE") == 0) {
-        return ONLINE;
-    } else if (strcmp(str, "AWAY") == 0) {
-        return AWAY;
-    } else if (strcmp(str, "BUSY") == 0) {
-        return BUSY;
-    } else {
-        return UNKNOWN; 
-    }
+    if (strcmp(str, "ONLINE") == 0)    return ONLINE;
+    else if (strcmp(str, "AWAY") == 0) return AWAY;
+    else if (strcmp(str, "BUSY") == 0) return BUSY;
+    else return UNKNOWN; 
+    
 }
-
 
 User* newUser(const char *username) {
     User* user = malloc(sizeof(User));
-    if (user == NULL) {
+    if (user == NULL) 
         return NULL;
-    }
     strncpy(user->username, username, MAX_USERNAME_LENGTH - 1);
     user->username[MAX_USERNAME_LENGTH - 1] = '\0'; 
-
     user->status =  ONLINE;
-
-    // strncpy(user->status, "online", MAX_USERNAME_LENGTH - 1);
-    // user->status[MAX_USERNAME_LENGTH - 1] = '\0'; 
     return user;
 }
 

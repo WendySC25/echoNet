@@ -106,7 +106,7 @@ char* toJSON(Message* message) {
             g_hash_table_iter_init(&iter, message->connections);
             while (g_hash_table_iter_next(&iter, &key, &value)) {
                 struct Connection *conn = (struct Connection *)value;
-                if (conn && conn->user && conn->user->username) 
+                if (conn && conn->user) 
                     cJSON_AddStringToObject(users, conn->user->username,  UserStatusToString(conn->user->status));
             }
 
@@ -419,7 +419,6 @@ Message getMessage(char* jsonString) {
 
         if (cJSON_IsArray(usernames)) {
 
-            // NO OLVIDER LIBERAR LA MEMEORIAAAAAA
             message.usernamesInvitation = g_array_new(FALSE, TRUE, sizeof(char*));
 
             cJSON *username;
@@ -655,7 +654,6 @@ Message parseInput(const char *input) {
         }
     } 
 
-    //Manejar bien que el nombr epuede estar divido REVISARRRRR NO OLVODARRRRRR
 
     else if (g_strcmp0(parts[0], "\\newRoom") == 0) {
         msg.type = NEW_ROOM;

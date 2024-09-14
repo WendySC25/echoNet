@@ -26,19 +26,17 @@ void printCentered(const char *text) {
     int terminal_width = ws.ws_col;
     int text_length = strlen(text);
     
-    // Asegurarse de que el texto no se pase de la terminal
     int max_start_col = terminal_width - text_length;
     if (start_col > max_start_col) {
         start_col = max_start_col;
     }
 
-    // Imprimir el texto comenzando en la columna deseada
     printf("%*s%s\n", start_col, "", text);
 }
 
 void handleNewUser(const char *username) {
     char message[1024];
-    snprintf(message, sizeof(message), BOLD GREEN "%s has entered the chat %s" RESET, username);
+    snprintf(message, sizeof(message), BOLD GREEN "%s has entered the chat." RESET, username);
     printCentered(message);
 }
 
@@ -100,7 +98,7 @@ void handleUserList(GHashTable *connections) {
     g_hash_table_destroy(connections);
 }
 
-void handleInvitation(const char *username, const char *roomname, struct Connection* connection) {
+void handleInvitation(const char *username, const char *roomname) {
     char message[1024];
     snprintf(message, sizeof(message), BOLD " %s invited you to room %s" RESET, username, roomname);
     printCentered(message);

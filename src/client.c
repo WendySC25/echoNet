@@ -10,17 +10,9 @@
 #include "message.h"
 #include <signal.h>
 #include "clientInterface.h"
+#include "client.h"
 
 volatile sig_atomic_t signal_received = 0;  
-
-
-
-void sentMessageToServer(struct Connection* connection);
-void createReceiveMessageThreadClient(struct Connection* connection);
-void *receiveMessageFromServer(void *arg);
-struct Connection* connetNewClient(char *ip, int port);
-void handleReciveMessage(char* buffer, struct Connection* conection);
-void handle_sigint(int sig);
 
 
 struct Connection* connetNewClient(char *ip, int port){
@@ -46,14 +38,13 @@ struct Connection* connetNewClient(char *ip, int port){
 }
 
 void sentMessageToServer(struct Connection* connection) {
-
     char *line = NULL;
     size_t lineSize = 0;
-    // printf("Type and we will send (type exit)...\n");
 
     char buffer[1024];
 
     while (true) {
+
         if (signal_received) {
             // Enviar un mensaje de desconexión al servidor
             Message msg;
@@ -68,10 +59,7 @@ void sentMessageToServer(struct Connection* connection) {
 
         ssize_t charCount = getline(&line, &lineSize, stdin);
         if (charCount > 0) {
-
             line[charCount - 1] = '\0'; 
-
-            // CAMBIA TOTALMENTE EL ENVIO DE MENSAJES
             Message message = parseInput(line);
             sprintf(buffer, "%s", toJSON(&message));
             fprintf(connection->out, "%s\n", buffer);
@@ -135,7 +123,7 @@ void handleReciveMessage(char* buffer, struct Connection* conection) {
             break;
 
         case INVITATION:
-            handleInvitation(message.username, message.roomname, conection);
+            handleInvitation(message.username, message.roomname);
             break;
 
         case JOINED_ROOM:
@@ -178,23 +166,7 @@ void *receiveMessageFromServer(void *arg) {
     return NULL;
 }
 
-
 void handle_sigint(int sig) {
-    printf("\nSeñal SIGINT recibida. Cerrando conexión...\n");
+    printf("\nSIGINT. Closing connection...\n");
     signal_received = 1; 
-}
-
-int main(int argc, char* argv[]) {
-    signal(SIGINT, handle_sigint);
-
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <IP> <Port>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    struct Connection* connection = connetNewClient(argv[1], atoi(argv[2]));
-    createReceiveMessageThreadClient(connection);
-    sentMessageToServer(connection);
-
-    return 0;
 }
