@@ -95,14 +95,13 @@ void sendPrivateMessage(struct Server* server, Message* message, struct Connecti
 
     if (recipientConnection == NULL) {
 
-          GHashTableIter iter;
-            gpointer key, value;
-            g_hash_table_iter_init(&iter, server->connections);
+        GHashTableIter iter;
+        gpointer key, value;
+        g_hash_table_iter_init(&iter, server->connections);
 
-            while (g_hash_table_iter_next(&iter, &key, &value)) {
-                struct Connection *conn = (struct Connection *)value;
-                printf("LISTA DE USUARIO: %s \n", conn->user->username);
-            }
+        while (g_hash_table_iter_next(&iter, &key, &value)) {
+            struct Connection *conn = (struct Connection *)value;
+        }
         Message errorResponse = {
             .type = RESPONSE,
             .operation = OP_TEXT,
